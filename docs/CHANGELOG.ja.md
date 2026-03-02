@@ -6,6 +6,27 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.28.1] - 2026-03-02
+
+### Changed
+
+- BREAKING: `expert` / `expert-mini` / `expert-cqrs` / `expert-cqrs-mini` ピースを `dual` / `dual-mini` / `dual-cqrs` / `dual-cqrs-mini` にリネーム。カスタマイズしている場合はピース名の更新が必要
+- `default-mini` / `default-test-first-mini` ピースを `default` に統合。`default` ピースが「テスト優先モード」を内包するよう拡張
+- `coding-pitfalls` ナレッジの主要項目を `coding` ポリシーに移動し、ポリシーとして実際に適用されるよう強化
+- `implement` / `plan` インストラクションにセルフチェック・コーダー指針を追加
+
+### Removed
+
+- `passthrough` ピースを削除
+- `structural-reform` ピースを削除
+
+### Internal
+
+- `expert-supervisor` ペルソナを `dual-supervisor` にリネーム
+- ビルトインカタログに不足していた `terraform`、`takt-default` 系、`deep-research` を追加
+- カテゴリ設定に `deep-research` を追加
+- 全ドキュメントに `copilot` プロバイダーの説明を追加し、Claude Code 寄りの記述をプロバイダー中立に修正
+
 ## [0.28.0] - 2026-03-02
 
 ### Added
