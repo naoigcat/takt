@@ -6,6 +6,41 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.29.0] - 2026-03-04
+
+### Added
+
+- レビュー＋修正ループピース群を追加: `review-fix`（多角レビュー）、`frontend-review-fix`、`backend-review-fix`、`dual-review-fix`、`dual-cqrs-review-fix`、`backend-cqrs-review-fix` および対応するレビュー専用ピース群を追加。コードレビューと自動修正を反復するワークフロー
+- `takt-default-review-fix` ピースを追加: TAKT 自己開発向けのレビュー＋修正ループワークフロー
+- `quality_gates` のグローバル/プロジェクトレベルオーバーライドをサポート: `~/.takt/config.yaml` および `.takt/config.yaml` の `piece_overrides.quality_gates` でビルトインピースの品質ゲートを上書き可能に (#384)
+- タスクの `base_branch` 設定: `takt add` 時に現在のブランチを base_branch として記録し、タスク実行時にそのブランチから分岐するよう設定可能に (#455)
+- プロバイダー設定の統一: `.takt/config.yaml` で `provider` ブロックに `type`/`model`/プロバイダー固有オプション（`network_access` 等）をまとめて記述可能に (#457)
+- ワーカープール超過時のリキュー: タスク実行がワーカー上限を超えた場合、タスクを自動的に再キューイングするよう対応 (#366)
+- `--pr` インタラクティブモードで `create_issue` アクションを除外し、`save_task` 時に PR のブランチ名を `base_branch` として自動設定
+- team_leader の `decomposeTask`/`requestMoreParts`/Phase 3 ステータス判定のプロバイダーイベントをロギング: `provider-events.jsonl` に記録されるようになり、デバッグ・分析が可能に
+
+### Fixed
+
+- `export-cc` で `facets/` のサブディレクトリ構造（`personas/`、`policies/` 等）が出力先に再現されなかった問題を修正
+- `cc-resolve` コマンドがコンフリクト解決後にマージコミットを生成するよう修正
+- グローバル設定 (`~/.takt/config.yaml`) の `piece` フィールドがピース解決チェーンで無視されるバグを修正 (#458)
+- Codex プロバイダーでプロバイダー優先のパーミッションモード解決が機能しない問題を修正
+- レビューコメントがない PR で `--pr` を使用した際にエラーになる問題を修正
+- `--auto-pr`/`--draft` オプションをパイプラインモード専用に制限（インタラクティブモードでの誤用を防止）
+- team_leader のストリーミングでバウンダリの先行フラッシュによる断片化を修正
+- team_leader のエラーメッセージが空文字列になるバグを修正
+- `decomposeTask`/`requestMoreParts` の `maxTurns` を 2 から 4 に増加（複雑なタスク分解でタイムアウトしていた問題を緩和）
+- Copilot プロバイダーのクライアント実装のバグを修正
+
+### Internal
+
+- E2E プロバイダー別テストをコンフィグレベル（`vitest.config.e2e.provider.ts`）で振り分けるよう変更。テストファイル内の `skip` ロジックを廃止し、JSON レポート出力を追加
+- 共有ノーマライザを `configNormalizers.ts` に抽出してプロバイダー設定解析を整理
+- `agent-usecases`/`schema-loader` を移動し `pieceExecution` の責務を分割
+- `check:release` で全プロバイダー（claude/codex/opencode）の E2E を実行するよう変更
+- CI: PR と push の重複実行を concurrency グループで抑制
+- CI: feature ブランチへの push と手動実行に対応
+
 ## [0.28.1] - 2026-03-02
 
 ### Changed

@@ -33,10 +33,22 @@ Organized by category.
 | | `dual-cqrs` | Frontend + backend development piece (CQRS+ES specialized): CQRS+ES, frontend, security, QA reviews with fix loops. |
 | 🏗️ Infrastructure | `terraform` | Terraform IaC development piece: plan → implement → parallel review → supervisor validation → fix → complete. |
 | 🔍 Review | `review` | Multi-perspective code review: auto-detects PR/branch/working diff, reviews from 5 parallel perspectives (arch/security/QA/testing/requirements), outputs consolidated results. |
+| | `review-fix` | Multi-perspective review + fix loop (architecture, security, QA, testing, requirements — 5 parallel reviewers with iterative fixes). |
+| | `frontend-review` | Frontend-focused review (structure, modularization, component design, security, QA). |
+| | `frontend-review-fix` | Frontend-focused review + fix loop (structure, modularization, component design, security, QA). |
+| | `backend-review` | Backend-focused review (structure, modularization, hexagonal architecture, security, QA). |
+| | `backend-review-fix` | Backend-focused review + fix loop (structure, modularization, hexagonal architecture, security, QA). |
+| | `dual-review` | Frontend + backend focused review (structure, modularization, component design, security, QA). |
+| | `dual-review-fix` | Frontend + backend focused review + fix loop (structure, modularization, component design, security, QA). |
+| | `dual-cqrs-review` | Frontend + CQRS+ES focused review (structure, modularization, domain model, component design, security, QA). |
+| | `dual-cqrs-review-fix` | Frontend + CQRS+ES focused review + fix loop (structure, modularization, domain model, component design, security, QA). |
+| | `backend-cqrs-review` | CQRS+ES focused review (structure, modularization, domain model, security, QA). |
+| | `backend-cqrs-review-fix` | CQRS+ES focused review + fix loop (structure, modularization, domain model, security, QA). |
 | 🧪 Testing | `unit-test` | Unit test focused piece: test analysis -> test implementation -> review -> fix. |
 | | `e2e-test` | E2E test focused piece: E2E analysis -> E2E implementation -> review -> fix (Vitest-based E2E flow). |
 | 🎵 TAKT Development | `takt-default` | TAKT development piece: plan → write tests → implement → AI antipattern review → 5-parallel review → fix → supervise → complete. |
 | | `takt-default-team-leader` | TAKT development piece with team leader: plan → write tests → team-leader implement → AI antipattern review → 5-parallel review → fix → supervise → complete. |
+| | `takt-default-review-fix` | TAKT development code review + fix loop (5 parallel reviewers: architecture, security, QA, testing, requirements — with iterative fixes). |
 | Others | `research` | Research piece: planner -> digger -> supervisor. Autonomously executes research without asking questions. |
 | | `deep-research` | Deep research piece: plan -> dig -> analyze -> supervise. Discovery-driven investigation that follows emerging questions with multi-perspective analysis. |
 | | `magi` | Deliberation system inspired by Evangelion. Three AI personas (MELCHIOR, BALTHASAR, CASPER) analyze and vote. |
