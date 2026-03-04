@@ -12,6 +12,7 @@ import {
   normalizePieceOverrides,
   denormalizePieceOverrides,
   denormalizeProviderOptions,
+  normalizeRuntime,
 } from '../configNormalizers.js';
 import { getGlobalConfigPath } from '../paths.js';
 import { applyGlobalConfigEnvOverrides } from '../env/config-env-overrides.js';
@@ -109,9 +110,7 @@ export class GlobalConfigManager {
       pieceCategoriesFile: parsed.piece_categories_file,
       providerOptions: normalizedProvider.providerOptions,
       providerProfiles: normalizeProviderProfiles(parsed.provider_profiles as Record<string, { default_permission_mode: unknown; movement_permission_overrides?: Record<string, unknown> }> | undefined),
-      runtime: parsed.runtime?.prepare && parsed.runtime.prepare.length > 0
-        ? { prepare: [...new Set(parsed.runtime.prepare)] }
-        : undefined,
+      runtime: normalizeRuntime(parsed.runtime),
       preventSleep: parsed.prevent_sleep,
       notificationSound: parsed.notification_sound,
       notificationSoundEvents: parsed.notification_sound_events ? {
@@ -230,10 +229,9 @@ export class GlobalConfigManager {
     if (rawProviderProfiles && Object.keys(rawProviderProfiles).length > 0) {
       raw.provider_profiles = rawProviderProfiles;
     }
-    if (config.runtime?.prepare && config.runtime.prepare.length > 0) {
-      raw.runtime = {
-        prepare: [...new Set(config.runtime.prepare)],
-      };
+    const normalizedRuntime = normalizeRuntime(config.runtime);
+    if (normalizedRuntime) {
+      raw.runtime = normalizedRuntime;
     }
     if (config.preventSleep !== undefined) {
       raw.prevent_sleep = config.preventSleep;
