@@ -2,15 +2,7 @@
 
 ## Decomposition Feasibility
 
-Before splitting a task into multiple parts, assess whether decomposition is appropriate. When decomposition is unsuitable, implementing in a single part is more efficient.
-
-| Criteria | Judgment |
-|----------|----------|
-| Changed files clearly separate into layers | Decompose |
-| Shared types/IDs span multiple parts | Single part |
-| Broad rename/refactoring | Single part |
-| Fewer than 5 files to change | Single part |
-| Same file needs editing by multiple parts | Single part |
+Before splitting a task into multiple parts, assess whether decomposition is appropriate. Conditions that prohibit decomposition and REJECT criteria are defined in the Task Decomposition Policy. This section explains the underlying reasoning.
 
 ### Detecting Cross-Cutting Concerns
 
@@ -20,17 +12,9 @@ When any of the following apply, independent parts cannot maintain consistency. 
 - Both the event emitter and event receiver need changes
 - An existing interface signature changes, requiring updates to all call sites
 
-## File Exclusivity Principle
+## Grouping Priority
 
-When decomposing into multiple parts, each part's file ownership must be completely exclusive.
-
-| Criteria | Judgment |
-|----------|----------|
-| Same file edited by multiple parts | REJECT (causes conflicts) |
-| Type definition and consumer in different parts | Consolidate into the type definition part |
-| Test file and implementation file in different parts | Consolidate into the same part |
-
-### Grouping Priority
+When decomposition is appropriate, use the following criteria to group files.
 
 1. **By dependency direction** — keep dependency source and target in the same part
 2. **By layer** — domain layer / infrastructure layer / API layer
