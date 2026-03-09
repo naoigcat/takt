@@ -408,6 +408,56 @@ Checklist:
 | Query side tests don't create data via Command | Recommended |
 | Integration tests consider Axon async processing | Required |
 
+## Master Data and CRUD
+
+Not everything in a CQRS+ES system needs event sourcing. Master data (reference data) with simple characteristics is better implemented as plain CRUD — it's simpler and easier to maintain.
+
+However, don't mechanically decide "it's master data, so CRUD". The more criteria below that apply, the more CRUD is suitable. Conversely, if even one requirement calls for CQRS+ES, consider adopting it.
+
+**Criteria for determining CRUD is sufficient:**
+
+| Aspect | Leans CRUD | Leans CQRS+ES |
+|--------|-----------|---------------|
+| Business requirements | Just "manage X" with no special mentions | Specific business rules or constraints |
+| Logic evolution | Simple reference/update, no foreseeable complexity | State transitions or lifecycle may grow complex |
+| Change history / audit | No need to track "who changed what when" | Change history or audit trail required |
+| Domain events | Changes don't affect other aggregates or processes | Changes trigger downstream processes |
+| Consistency scope | Self-contained, no cross-aggregate consistency needed | Must maintain consistency with other aggregates |
+| Point-in-time queries | No "what was the state at time T" queries | Point-in-time queries required |
+
+**Typical CRUD candidates:**
+- Code masters such as prefecture/country codes
+- Classification masters such as categories and tags
+- Configuration values, constant tables
+
+**Cases where CQRS+ES is justified:**
+- Product master, but price change history tracking is needed
+- Organization master, but changes trigger permission recalculation
+- Business partner master, but has credit assessment state transitions
+
+```kotlin
+// CRUD is sufficient: Simple category master
+@Entity
+data class Category(
+    @Id val categoryId: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+// CQRS+ES is appropriate: Product with price change history tracking
+data class Product(
+    val productId: String,
+    val currentPrice: Money
+) {
+    fun changePrice(newPrice: Money, reason: String): PriceChangedEvent {
+        require(newPrice.amount > BigDecimal.ZERO) { "Price must be positive" }
+        return PriceChangedEvent(productId, currentPrice, newPrice, reason)
+    }
+}
+```
+
+Even when implementing with CRUD, other aggregates in the CQRS+ES system reference CRUD entities by ID. The principle that CRUD entities don't directly access aggregate internal state still applies.
+
 ## Infrastructure Layer
 
 Check:

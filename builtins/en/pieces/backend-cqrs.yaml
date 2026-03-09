@@ -1,5 +1,5 @@
 name: backend-cqrs
-description: CQRS+ES, Security, QA Expert Review
+description: CQRS+ES development piece with test-first, AI review, 2-stage reviews, fix loops, and supervision
 piece_config:
   provider_options:
     codex:
@@ -10,7 +10,19 @@ max_movements: 30
 initial_movement: plan
 loop_monitors:
   - cycle:
-      - reviewers
+      - ai_review
+      - ai_fix
+    threshold: 3
+    judge:
+      persona: supervisor
+      instruction_template: loop-monitor-ai-fix
+      rules:
+        - condition: Healthy (making progress)
+          next: ai_review
+        - condition: Unproductive (no improvement)
+          next: reviewers_1
+  - cycle:
+      - reviewers_1
       - fix
     threshold: 3
     judge:
@@ -18,7 +30,7 @@ loop_monitors:
       instruction_template: loop-monitor-reviewers-fix
       rules:
         - condition: converging (findings decreasing, fixes applied)
-          next: reviewers
+          next: reviewers_1
         - condition: unproductive (same findings repeating)
           next: supervise
 movements:
@@ -41,13 +53,53 @@ movements:
     instruction: plan
     rules:
       - condition: Task analysis and planning is complete
-        next: implement
+        next: write_tests
       - condition: Requirements are unclear and planning cannot proceed
         next: ABORT
     output_contracts:
       report:
         - name: plan.md
           format: plan
+  - name: write_tests
+    edit: true
+    persona: coder
+    policy:
+      - coding
+      - testing
+    knowledge:
+      - backend
+      - cqrs-es
+      - architecture
+    provider_options:
+      claude:
+        allowed_tools:
+          - Read
+          - Glob
+          - Grep
+          - Edit
+          - Write
+          - Bash
+          - WebSearch
+          - WebFetch
+    required_permission_mode: edit
+    instruction: write-tests-first
+    rules:
+      - condition: Test creation is complete
+        next: implement
+      - condition: Skipping test creation as target is not yet implemented
+        next: implement
+      - condition: Cannot proceed with test creation
+        next: plan
+      - condition: User input required for clarification
+        next: write_tests
+        requires_user_input: true
+        interactive_only: true
+    output_contracts:
+      report:
+        - name: test-scope.md
+          format: coder-scope
+        - name: test-decisions.md
+          format: coder-decisions
   - name: implement
     edit: true
     persona: coder
@@ -106,7 +158,7 @@ movements:
     instruction: ai-review
     rules:
       - condition: No AI-specific issues found
-        next: reviewers
+        next: reviewers_1
       - condition: AI-specific issues detected
         next: ai_fix
     output_contracts:
@@ -159,9 +211,9 @@ movements:
       - condition: ai_review's findings are valid (fix required)
         next: ai_fix
       - condition: ai_fix's judgment is valid (no fix needed)
-        next: reviewers
+        next: reviewers_1
     instruction: arbitrate
-  - name: reviewers
+  - name: reviewers_1
     parallel:
       - name: cqrs-es-review
         edit: false
@@ -186,6 +238,35 @@ movements:
           report:
             - name: cqrs-es-review.md
               format: cqrs-es-review
+      - name: testing-review
+        edit: false
+        persona: testing-reviewer
+        policy:
+          - review
+          - testing
+        provider_options:
+          claude:
+            allowed_tools:
+              - Read
+              - Glob
+              - Grep
+              - WebSearch
+              - WebFetch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        instruction: review-test
+        output_contracts:
+          report:
+            - name: testing-review.md
+              format: testing-review
+    rules:
+      - condition: all("approved")
+        next: reviewers_2
+      - condition: any("needs_fix")
+        next: fix
+  - name: reviewers_2
+    parallel:
       - name: security-review
         edit: false
         persona: security-reviewer
@@ -260,7 +341,7 @@ movements:
     pass_previous_response: false
     rules:
       - condition: Fix complete
-        next: reviewers
+        next: reviewers_1
       - condition: Cannot proceed, insufficient info
         next: plan
     instruction: fix
