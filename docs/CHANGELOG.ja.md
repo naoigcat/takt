@@ -6,6 +6,41 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.32.0] - 2026-03-09
+
+### Added
+
+- `takt export-codex` コマンド: ピース/ファセットを Codex スキルとしてエクスポート (`~/.agents/skills/takt/`) (#475)
+- `frontend` / `backend` / `backend-cqrs` ピースにテストファースト（`write_tests`）ムーブメントを追加し、レビューを2段階化（Stage 1: 構造・実装品質 → Stage 2: 安全性・品質保証）
+- セキュリティナレッジにログ・マスキングセクションを追加（パスワード露出、`toString()` によるフィールド漏洩の検出基準）
+- CQRS+ES ナレッジにマスタデータと CRUD の使い分けセクションを追加（6つの判断基準テーブル付き）
+- `/ci` コメントで PR の CI を手動トリガーするワークフローを追加
+- devcontainer で worktree クローン先の親ディレクトリが書き込み不可の場合に `.takt/worktrees/` へフォールバック
+- インタラクティブモードのアシスタントが設計判断を勝手にしないようポリシーを追加
+
+### Changed
+
+- BREAKING: ピース YAML の `instruction_template` フィールドを非推奨化。`instruction` に統一（後方互換あり、deprecated 警告を表示） (#476)
+- レビュー系ピースの命名規則を `review-{variant}` / `review-fix-{variant}` に統一
+- タスク分解の REJECT 基準をナレッジからポリシーに分離
+- faceted-prompting を npm パッケージ (`@anthropic-ai/faceted-prompting`) に移行し、内蔵コードを削除
+
+### Fixed
+
+- `takt run` の Slack 通知が当該 run で実行したタスクのみを送信するよう修正（従来は全タスクを通知していた）
+- `ProviderPermissionProfilesSchema` に `copilot` が欠落していた問題を修正 (#487)
+- PR fix フローで既存ブランチ存在時に `baseBranch` 検証をスキップするよう修正
+- `review-fix-takt-default` の fix 後フローを `takt-default` と統一
+- `write-tests-first` インストラクションからビルド検証手順を削除
+- `cc-resolve` ワークフローに `actions: write` パーミッションを追加
+
+### Internal
+
+- SDK 依存パッケージを最新化
+- `deploySkill` のコア処理を `deploySkillInternal` に抽出し、`deploySkillCodex` と共有
+- clone ブランチ解決をリモートブランチ対応に拡張（`localBranchExists` / `remoteBranchExists` に分離）
+- README の起動フローを整理し「タスクにつむ」を通常フローとして記載
+
 ## [0.31.0] - 2026-03-06
 
 ### Changed
