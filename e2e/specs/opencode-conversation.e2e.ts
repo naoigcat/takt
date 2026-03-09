@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { resetSharedServer } from '../../src/infra/opencode/client.js';
 import { OpenCodeProvider } from '../../src/infra/providers/opencode.js';
 
-const MODEL = process.env.OPENCODE_E2E_MODEL ?? 'minimax/MiniMax-M2.5-highspeed';
+const MODEL = process.env.TAKT_E2E_MODEL ?? process.env.OPENCODE_E2E_MODEL ?? 'opencode/big-pickle';
 
 describe('OpenCode real E2E conversation', () => {
   afterAll(() => {

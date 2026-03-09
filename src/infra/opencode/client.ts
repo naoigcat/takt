@@ -476,6 +476,24 @@ export class OpenCodeClient {
             continue;
           }
 
+          if (sseEvent.type === 'message.part.delta') {
+            const deltaProps = sseEvent.properties as {
+              sessionID: string;
+              partID: string;
+              field: string;
+              delta: string;
+            };
+            if (deltaProps.field === 'text' && deltaProps.delta) {
+              const visibleDelta = stripPromptEcho(deltaProps.delta, echoState);
+              if (visibleDelta) {
+                emitText(options.onStream, visibleDelta);
+                const previous = textContentParts.get(deltaProps.partID) ?? '';
+                textContentParts.set(deltaProps.partID, `${previous}${visibleDelta}`);
+              }
+            }
+            continue;
+          }
+
           if (sseEvent.type === 'permission.asked') {
             const permProps = sseEvent.properties as {
               id: string;
