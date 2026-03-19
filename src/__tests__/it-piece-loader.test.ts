@@ -731,6 +731,36 @@ movements:
     });
   });
 
+  it('should deny transport when project config explicitly overrides global true with false', () => {
+    const piecesDir = join(testDir, '.takt', 'pieces');
+    mkdirSync(piecesDir, { recursive: true });
+    loadGlobalConfigMock.mockReturnValue({
+      pieceMcpServers: { stdio: true },
+    });
+    writeFileSync(join(testDir, '.takt', 'config.yaml'), 'piece_mcp_servers:\n  stdio: false\n');
+
+    writeFileSync(join(piecesDir, 'denied-mcp.yaml'), `
+name: denied-mcp
+description: Piece with stdio MCP denied by project
+max_movements: 5
+initial_movement: test
+
+movements:
+  - name: test
+    persona: coder
+    mcp_servers:
+      playwright:
+        command: npx
+        args: ["-y", "@anthropic-ai/mcp-server-playwright"]
+    rules:
+      - condition: Done
+        next: COMPLETE
+    instruction: "Run tests"
+`);
+
+    expect(() => loadPiece('denied-mcp', testDir)).toThrow(/piece_mcp_servers/);
+  });
+
   it('should preserve globally allowed transports when project config enables another transport', () => {
     const piecesDir = join(testDir, '.takt', 'pieces');
     mkdirSync(piecesDir, { recursive: true });
