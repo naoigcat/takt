@@ -134,7 +134,6 @@ interactive_preview_movements: 3  # Movement previews in interactive mode (0-10,
 | `allow_git_hooks` | boolean | `false` | Allow git hooks during TAKT-managed auto-commit |
 | `allow_git_filters` | boolean | `false` | Allow git filters during TAKT-managed auto-commit |
 | `auto_pr` | boolean | - | Auto-create PR after worktree execution |
-| `verbose` | boolean | - | Verbose output mode |
 | `minimal_output` | boolean | `false` | Suppress AI output (for CI) |
 | `runtime` | object | - | Runtime environment defaults (e.g., `prepare: [gradle, node]`) |
 | `persona_providers` | object | - | Per-persona provider/model overrides (e.g., `coder: { provider: codex, model: o3-mini }`) |
@@ -172,7 +171,8 @@ piece: default                # Current piece for this project
 provider: claude              # Override provider for this project
 model: sonnet                 # Override model for this project
 auto_pr: true                 # Auto-create PR after worktree execution
-verbose: false                # Verbose output mode
+logging:
+  level: info                 # Console log level: debug | info | warn | error
 concurrency: 2                # Parallel task count for takt run in this project (1-10)
 # base_branch: main           # Base branch for clone creation (overrides global, default: remote default branch)
 
@@ -199,7 +199,6 @@ concurrency: 2                # Parallel task count for takt run in this project
 | `allow_git_hooks` | boolean | `false` | Allow git hooks during TAKT-managed auto-commit |
 | `allow_git_filters` | boolean | `false` | Allow git filters during TAKT-managed auto-commit |
 | `auto_pr` | boolean | - | Auto-create PR after worktree execution |
-| `verbose` | boolean | - | Verbose output mode |
 | `concurrency` | number (1-10) | `1` (from global) | Parallel task count for `takt run` |
 | `base_branch` | string | - | Base branch for clone creation (overrides global, default: remote default branch) |
 | `provider_options` | object | - | Provider-specific options |
@@ -487,19 +486,21 @@ logging:
 
 Debug logs are written to `.takt/runs/debug-{timestamp}/logs/debug.log` in NDJSON format.
 
-### Verbose Mode
+### Detailed Console Output
 
-Set `verbose: true` in your config:
+Enable detailed console output by setting `logging.level: debug` in your config:
 
 ```yaml
 # ~/.takt/config.yaml or .takt/config.yaml
-verbose: true
+logging:
+  level: debug
 ```
 
-You can also force verbose output via environment variable:
+This also enables the internal verbose console mode used by the CLI.
+
+If you want debug artifacts such as `debug.log`, enable them explicitly:
 
 ```yaml
-TAKT_VERBOSE=true
+logging:
+  debug: true
 ```
-
-This also enables `logging.debug`, `logging.trace`, and sets `logging.level` to `debug`.
