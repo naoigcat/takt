@@ -16,7 +16,7 @@ const log = createLogger('gitlab-mr');
  * Returns undefined if no MR exists.
  */
 export function findExistingMr(cwd: string, branch: string): ExistingPr | undefined {
-  const glabStatus = checkGlabCli();
+  const glabStatus = checkGlabCli(cwd);
   if (!glabStatus.available) return undefined;
 
   try {
@@ -43,7 +43,7 @@ export function createMergeRequest(cwd: string, options: CreatePrOptions): Creat
     throw new Error('--repo is not supported with GitLab provider. Use cwd context instead.');
   }
 
-  const glabStatus = checkGlabCli();
+  const glabStatus = checkGlabCli(cwd);
   if (!glabStatus.available) {
     return { success: false, error: glabStatus.error };
   }
@@ -87,7 +87,7 @@ export function createMergeRequest(cwd: string, options: CreatePrOptions): Creat
  * Add a comment (note) to a GitLab Merge Request.
  */
 export function commentOnMr(cwd: string, mrNumber: number, body: string): CommentResult {
-  const glabStatus = checkGlabCli();
+  const glabStatus = checkGlabCli(cwd);
   if (!glabStatus.available) {
     return { success: false, error: glabStatus.error };
   }

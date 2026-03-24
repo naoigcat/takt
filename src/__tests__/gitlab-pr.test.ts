@@ -91,6 +91,18 @@ describe('findExistingMr', () => {
     // Then
     expect(result).toBeUndefined();
   });
+
+  it('checkGlabCli に cwd を渡す', () => {
+    // Given
+    mockCheckGlabCli.mockReturnValue({ available: true });
+    mockExecFileSync.mockReturnValue(JSON.stringify([]));
+
+    // When
+    findExistingMr('/my/project', 'feat/branch');
+
+    // Then
+    expect(mockCheckGlabCli).toHaveBeenCalledWith('/my/project');
+  });
 });
 
 describe('createMergeRequest', () => {
@@ -212,6 +224,22 @@ describe('createMergeRequest', () => {
     expect(result.error).toBeDefined();
   });
 
+  it('checkGlabCli に cwd を渡す', () => {
+    // Given
+    mockCheckGlabCli.mockReturnValue({ available: true });
+    mockExecFileSync.mockReturnValue('https://gitlab.com/org/repo/-/merge_requests/99\n');
+
+    // When
+    createMergeRequest('/my/project', {
+      branch: 'feat/branch',
+      title: 'MR',
+      body: 'body',
+    });
+
+    // Then
+    expect(mockCheckGlabCli).toHaveBeenCalledWith('/my/project');
+  });
+
   it('repo が指定された場合、明示エラーを throw する', () => {
     // Given
     const options = {
@@ -268,6 +296,18 @@ describe('commentOnMr', () => {
     // Then
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
+  });
+
+  it('checkGlabCli に cwd を渡す', () => {
+    // Given
+    mockCheckGlabCli.mockReturnValue({ available: true });
+    mockExecFileSync.mockReturnValue('');
+
+    // When
+    commentOnMr('/my/project', 42, 'LGTM');
+
+    // Then
+    expect(mockCheckGlabCli).toHaveBeenCalledWith('/my/project');
   });
 });
 

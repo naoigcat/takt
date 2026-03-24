@@ -64,7 +64,7 @@ describe('GitLabProvider', () => {
       const result = provider.checkCliStatus();
 
       // Then
-      expect(mockCheckGlabCli).toHaveBeenCalledTimes(1);
+      expect(mockCheckGlabCli).toHaveBeenCalledWith(process.cwd());
       expect(result).toBe(status);
     });
 
@@ -77,6 +77,7 @@ describe('GitLabProvider', () => {
       const result = provider.checkCliStatus();
 
       // Then
+      expect(mockCheckGlabCli).toHaveBeenCalledWith(process.cwd());
       expect(result.available).toBe(false);
       expect(result.error).toBe('glab is not installed');
     });
@@ -93,8 +94,35 @@ describe('GitLabProvider', () => {
       const result = provider.checkCliStatus();
 
       // Then
+      expect(mockCheckGlabCli).toHaveBeenCalledWith(process.cwd());
       expect(result.available).toBe(false);
       expect(result.error).toContain('not authenticated');
+    });
+
+    it('cwd を指定した場合は checkGlabCli にそのまま転送する', () => {
+      // Given
+      const status = { available: true };
+      mockCheckGlabCli.mockReturnValue(status);
+      const provider = new GitLabProvider();
+
+      // When
+      const result = provider.checkCliStatus('/my/project');
+
+      // Then
+      expect(mockCheckGlabCli).toHaveBeenCalledWith('/my/project');
+      expect(result).toBe(status);
+    });
+
+    it('cwd 省略時は process.cwd() をフォールバックとして渡す', () => {
+      // Given
+      mockCheckGlabCli.mockReturnValue({ available: true });
+      const provider = new GitLabProvider();
+
+      // When
+      provider.checkCliStatus();
+
+      // Then
+      expect(mockCheckGlabCli).toHaveBeenCalledWith(process.cwd());
     });
   });
 
@@ -126,7 +154,7 @@ describe('GitLabProvider', () => {
       const result = provider.createIssue(opts);
 
       // Then
-      expect(mockCreateIssue).toHaveBeenCalledWith(opts);
+      expect(mockCreateIssue).toHaveBeenCalledWith(opts, process.cwd());
       expect(result).toBe(issueResult);
     });
 
@@ -140,7 +168,33 @@ describe('GitLabProvider', () => {
       provider.createIssue(opts);
 
       // Then
-      expect(mockCreateIssue).toHaveBeenCalledWith(opts);
+      expect(mockCreateIssue).toHaveBeenCalledWith(opts, process.cwd());
+    });
+
+    it('cwd を指定した場合は createIssue にそのまま転送する', () => {
+      // Given
+      const opts = { title: 'Issue', body: 'Body' };
+      mockCreateIssue.mockReturnValue({ success: true, url: 'https://gitlab.com/org/repo/-/issues/3' });
+      const provider = new GitLabProvider();
+
+      // When
+      provider.createIssue(opts, '/my/project');
+
+      // Then
+      expect(mockCreateIssue).toHaveBeenCalledWith(opts, '/my/project');
+    });
+
+    it('cwd 省略時は process.cwd() をフォールバックとして渡す', () => {
+      // Given
+      const opts = { title: 'Issue', body: 'Body' };
+      mockCreateIssue.mockReturnValue({ success: true, url: 'https://gitlab.com/org/repo/-/issues/4' });
+      const provider = new GitLabProvider();
+
+      // When
+      provider.createIssue(opts);
+
+      // Then
+      expect(mockCreateIssue).toHaveBeenCalledWith(opts, process.cwd());
     });
   });
 

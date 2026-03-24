@@ -67,11 +67,11 @@ export interface PrReviewData {
 }
 
 export interface GitProvider {
-  checkCliStatus(): CliStatus;
+  checkCliStatus(cwd?: string): CliStatus;
 
   fetchIssue(issueNumber: number): Issue;
 
-  createIssue(options: CreateIssueOptions): CreateIssueResult;
+  createIssue(options: CreateIssueOptions, cwd?: string): CreateIssueResult;
 
   fetchPrReviewComments(prNumber: number): PrReviewData;
 

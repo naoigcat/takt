@@ -12,16 +12,16 @@ import { findExistingMr, commentOnMr, createMergeRequest, fetchMrReviewComments 
 import type { GitProvider, CliStatus, Issue, ExistingPr, CreateIssueOptions, CreateIssueResult, CreatePrOptions, CreatePrResult, CommentResult, PrReviewData } from '../git/types.js';
 
 export class GitLabProvider implements GitProvider {
-  checkCliStatus(): CliStatus {
-    return checkGlabCli();
+  checkCliStatus(cwd?: string): CliStatus {
+    return checkGlabCli(cwd ?? process.cwd());
   }
 
   fetchIssue(issueNumber: number): Issue {
     return fetchIssue(issueNumber);
   }
 
-  createIssue(options: CreateIssueOptions): CreateIssueResult {
-    return createIssue(options);
+  createIssue(options: CreateIssueOptions, cwd?: string): CreateIssueResult {
+    return createIssue(options, cwd ?? process.cwd());
   }
 
   fetchPrReviewComments(prNumber: number): PrReviewData {

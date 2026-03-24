@@ -65,8 +65,8 @@ export function fetchIssue(issueNumber: number): Issue {
 /**
  * Create a GitLab Issue via `glab issue create`.
  */
-export function createIssue(options: CreateIssueOptions): CreateIssueResult {
-  const glabStatus = checkGlabCli();
+export function createIssue(options: CreateIssueOptions, cwd: string): CreateIssueResult {
+  const glabStatus = checkGlabCli(cwd);
   if (!glabStatus.available) {
     return { success: false, error: glabStatus.error };
   }
@@ -80,6 +80,7 @@ export function createIssue(options: CreateIssueOptions): CreateIssueResult {
 
   try {
     const output = execFileSync('glab', args, {
+      cwd,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });

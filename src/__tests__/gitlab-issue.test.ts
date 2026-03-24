@@ -299,13 +299,14 @@ describe('fetchIssue', () => {
 
 describe('createIssue', () => {
   it('成功時は success: true と URL を返す', () => {
-    // Given: checkGlabCli succeeds (first call), then createIssue succeeds
+    // Given: getRemoteHostname (git remote), checkGlabCli (glab auth), then createIssue
     mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
       .mockReturnValueOnce('') // glab auth status
       .mockReturnValueOnce('https://gitlab.com/org/repo/-/issues/1\n');
 
     // When
-    const result = createIssue({ title: 'New issue', body: 'Description' });
+    const result = createIssue({ title: 'New issue', body: 'Description' }, '/my/project');
 
     // Then
     expect(result.success).toBe(true);
@@ -315,14 +316,15 @@ describe('createIssue', () => {
   it('--description オプションで body を渡す（--body ではない）', () => {
     // Given
     mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
       .mockReturnValueOnce('') // glab auth status
       .mockReturnValueOnce('https://gitlab.com/org/repo/-/issues/2\n');
 
     // When
-    createIssue({ title: 'Title', body: 'Body text' });
+    createIssue({ title: 'Title', body: 'Body text' }, '/my/project');
 
     // Then
-    const createCall = mockExecFileSync.mock.calls[1];
+    const createCall = mockExecFileSync.mock.calls[2];
     expect(createCall[1]).toContain('--description');
     expect(createCall[1]).not.toContain('--body');
   });
@@ -330,25 +332,27 @@ describe('createIssue', () => {
   it('ラベル付きの場合 --label オプションを使う', () => {
     // Given
     mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
       .mockReturnValueOnce('') // glab auth status
       .mockReturnValueOnce('https://gitlab.com/org/repo/-/issues/3\n');
 
     // When
-    createIssue({ title: 'Bug', body: 'Details', labels: ['bug', 'urgent'] });
+    createIssue({ title: 'Bug', body: 'Details', labels: ['bug', 'urgent'] }, '/my/project');
 
     // Then
-    const createCall = mockExecFileSync.mock.calls[1];
+    const createCall = mockExecFileSync.mock.calls[2];
     expect(createCall[1]).toContain('--label');
   });
 
   it('glab CLI が利用不可の場合は success: false を返す', () => {
     // Given
     mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
       .mockImplementationOnce(() => { throw new Error('not logged in'); })
       .mockImplementationOnce(() => { throw new Error('command not found'); });
 
     // When
-    const result = createIssue({ title: 'Title', body: 'Body' });
+    const result = createIssue({ title: 'Title', body: 'Body' }, '/my/project');
 
     // Then
     expect(result.success).toBe(false);
@@ -358,14 +362,34 @@ describe('createIssue', () => {
   it('glab issue create が失敗した場合は success: false を返す', () => {
     // Given
     mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
       .mockReturnValueOnce('') // glab auth status
       .mockImplementationOnce(() => { throw new Error('API error'); });
 
     // When
-    const result = createIssue({ title: 'Title', body: 'Body' });
+    const result = createIssue({ title: 'Title', body: 'Body' }, '/my/project');
 
     // Then
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
+  });
+
+  it('cwd を checkGlabCli に転送する', () => {
+    // Given
+    mockExecFileSync
+      .mockReturnValueOnce('https://gitlab.com/org/repo.git\n') // git remote get-url origin
+      .mockReturnValueOnce('') // glab auth status
+      .mockReturnValueOnce('https://gitlab.com/org/repo/-/issues/5\n');
+
+    // When
+    createIssue({ title: 'Test', body: 'Body' }, '/specific/dir');
+
+    // Then: first call is getRemoteHostname which receives cwd via execFileSync options
+    const remoteCall = mockExecFileSync.mock.calls[0];
+    expect(remoteCall[2]).toHaveProperty('cwd', '/specific/dir');
+
+    // Then: third call is glab issue create which also receives cwd
+    const createCall = mockExecFileSync.mock.calls[2];
+    expect(createCall[2]).toHaveProperty('cwd', '/specific/dir');
   });
 });

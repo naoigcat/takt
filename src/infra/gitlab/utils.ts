@@ -6,6 +6,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { MAX_PAGES } from '../git/constants.js';
+import { getRemoteHostname } from '../git/detect.js';
 import type { CliStatus } from '../git/types.js';
 
 export const ITEMS_PER_PAGE = 100;
@@ -20,10 +21,19 @@ export function parseJson<T>(raw: string, context: string): T {
 
 /**
  * Check if `glab` CLI is available and authenticated.
+ *
+ * When `cwd` is provided, the hostname of the `origin` remote is extracted
+ * and `glab auth status --hostname <host>` is used so that only the
+ * target host's authentication state is evaluated (not all configured hosts).
  */
-export function checkGlabCli(): CliStatus {
+export function checkGlabCli(cwd: string): CliStatus {
+  const hostname = getRemoteHostname(cwd);
+  const authArgs = hostname
+    ? ['auth', 'status', '--hostname', hostname]
+    : ['auth', 'status'];
+
   try {
-    execFileSync('glab', ['auth', 'status'], { stdio: 'pipe' });
+    execFileSync('glab', authArgs, { stdio: 'pipe' });
     return { available: true };
   } catch {
     try {

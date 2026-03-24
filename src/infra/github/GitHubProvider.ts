@@ -11,7 +11,7 @@ import { findExistingPr, commentOnPr, createPullRequest, fetchPrReviewComments }
 import type { GitProvider, CliStatus, Issue, ExistingPr, CreateIssueOptions, CreateIssueResult, CreatePrOptions, CreatePrResult, CommentResult, PrReviewData } from '../git/types.js';
 
 export class GitHubProvider implements GitProvider {
-  checkCliStatus(): CliStatus {
+  checkCliStatus(_cwd?: string): CliStatus {
     return checkGhCli();
   }
 
@@ -19,7 +19,7 @@ export class GitHubProvider implements GitProvider {
     return fetchIssue(issueNumber);
   }
 
-  createIssue(options: CreateIssueOptions): CreateIssueResult {
+  createIssue(options: CreateIssueOptions, _cwd?: string): CreateIssueResult {
     return createIssue(options);
   }
 
