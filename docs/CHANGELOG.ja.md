@@ -97,9 +97,9 @@
 
 ### Internal
 
-- テスト系ピース・ファセットの全面整備（e2e-test → fill-e2e、unit-test → fill-unit にリネーム、ナレッジ・ポリシー追加）
+- テスト系ピース・ファセットの全面整備（e2e-test → audit-e2e、unit-test → audit-unit にリネーム、ナレッジ・ポリシー追加）
 - デザイン忠実度ポリシーの追加とフロントエンド系ピースへの統合
-- security-audit ピースの追加
+- audit-security ピースの追加
 - ファセットデプロイメントのリファクタリング（templates ディレクトリの廃止、facets ディレクトリへの統合） (#505)
 - `isPathInside` ユーティリティを追加し、クローン削除・worktree 再利用のパス検証を強化
 - ループモニターの閾値調整とレビューポリシーの改善
