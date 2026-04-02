@@ -58,6 +58,22 @@ export interface ErrorEventData {
   raw?: string;
 }
 
+export interface AssistantErrorEventData {
+  error: string;
+  sessionId: string;
+}
+
+export interface RateLimitEventData {
+  sessionId: string;
+  status: 'allowed' | 'allowed_warning' | 'rejected';
+  rateLimitType?: string;
+  overageStatus?: 'allowed' | 'allowed_warning' | 'rejected';
+  overageDisabledReason?: string;
+  resetsAt?: number;
+  overageResetsAt?: number;
+  isUsingOverage?: boolean;
+}
+
 /** Stream event (discriminated union) */
 export type StreamEvent =
   | { type: 'init'; data: InitEventData }
@@ -67,6 +83,8 @@ export type StreamEvent =
   | { type: 'text'; data: TextEventData }
   | { type: 'thinking'; data: ThinkingEventData }
   | { type: 'result'; data: ResultEventData }
+  | { type: 'assistant_error'; data: AssistantErrorEventData }
+  | { type: 'rate_limit'; data: RateLimitEventData }
   | { type: 'error'; data: ErrorEventData };
 
 /** Callback for streaming events */
