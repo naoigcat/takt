@@ -9,6 +9,7 @@ import type { AgentSetup, Provider, ProviderAgent, ProviderCallOptions } from '.
 function toMockOptions(options: ProviderCallOptions): MockCallOptions {
   return {
     cwd: options.cwd,
+    abortSignal: options.abortSignal,
     sessionId: options.sessionId,
     onStream: options.onStream,
   };
