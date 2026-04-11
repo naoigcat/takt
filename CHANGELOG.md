@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.35.4] - 2026-04-11
+
+### Changed
+
+- レビューポリシーにツール出力の信頼性検証ルールを追加: ツール出力が正常に読めることを確認してから指摘すること、検索失敗だけでコード不在と断定しないことをルール化
+
+### Fixed
+
+- ターミナルの行数が少ない環境で選択メニューが正常に動作しない問題を修正。ビューポートベースのスクロールを追加 (#608)
+- Windows で `.cmd` shim の spawn が失敗する問題を修正（Claude Headless、Cursor、Copilot プロバイダ）
+
+### Internal
+
+- 選択メニューを `select-menu.ts`、`select-viewport.ts` に分離し、純粋関数化とビューポートテストを追加
+- ワークフロードキュメントの例で古いフィールド名を使っていた問題を修正 (#619)
+
 ## [0.35.3] - 2026-04-10
 
 ### Added
