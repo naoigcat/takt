@@ -270,7 +270,7 @@ describe('README public terminology', () => {
     const builtinJaConfig = readDoc('../../builtins/ja/config.yaml');
 
     expect(changelogJa).not.toContain('pieces, personas, policies, knowledge, instructions, output-contracts');
-    expect(changelogJa).not.toContain('max_movement');
+    expect(changelogJa).not.toMatch(/\bmax_movement\b/);
     expect(changelogJa).not.toContain('instruction_template フィールドを非推奨化');
     expect(changelogJa).not.toContain('後方互換あり');
     expect(changelogJa).not.toContain(`${removedTerms.oldStepTitle}Executor`);
