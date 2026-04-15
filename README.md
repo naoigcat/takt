@@ -153,6 +153,8 @@ See the [Builtin Catalog](./docs/builtin-catalog.md) for all workflows and perso
 | `takt list` | Manage task branches (merge, retry, force-fail, instruct, delete) |
 | `takt #N` | Execute GitHub Issue as task |
 | `takt eject` | Copy builtin workflows/facets for customization |
+| `takt workflow init` | Create a new workflow scaffold |
+| `takt workflow doctor` | Validate workflow definitions |
 | `takt repertoire add` | Install a repertoire package from GitHub |
 
 See the [CLI Reference](./docs/cli-reference.md) for all commands and options.
@@ -184,7 +186,9 @@ See the [Configuration Guide](./docs/configuration.md) for all options, provider
 ### Custom workflows
 
 ```bash
-takt eject default    # Copy builtin workflow to ~/.takt/workflows/ and edit
+takt workflow init my-flow   # Create a new workflow scaffold
+takt workflow doctor my-flow # Validate a workflow definition
+takt eject default           # Copy builtin workflow to ~/.takt/workflows/ and edit
 ```
 
 ### Custom personas

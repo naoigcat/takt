@@ -6,6 +6,40 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.36.0] - 2026-04-15
+
+### Added
+
+- サブワークフロー呼び出し（`call:` ステップ）を追加: ステップに `call: <workflow-name>` を指定すると、別のワークフローをサブルーチンとして実行可能。呼び出し先ワークフローは `subworkflow: { callable: true }` 宣言が必要。`overrides:` でプロバイダ/モデルの上書きも可能。再帰呼び出し検知・最大ネスト深度 5 (#153, #624)
+- システムステップ（`kind: system`）を追加: AI エージェントを介さずに実行されるステップ。`system_inputs:` でランタイムコンテキスト（タスク、ブランチ、PR、Issue、タスクキュー）をワークフロー状態にバインドし、`effects:` で副作用（`enqueue_task`, `comment_pr`, `sync_with_root`, `resolve_conflicts_with_ai`, `merge_pr`）を実行 (#586, #622)
+- 決定論的 `when:` ルール条件を追加: ルールに `condition:` の代わりに `when:` を指定すると、比較演算子（`==`, `!=`, `>`, `<`, `>=`, `<=`）やブール論理（`&&`, `||`）、ワークフロー状態参照（`context.*`, `structured.*`, `effect.*`）で AI を介さずルーティング (#586, #622)
+- ステップの構造化出力（`structured_output:`）を追加: `structured_output: { schema_ref: "<name>" }` でワークフロー定義の `schemas:` マップ内の JSON スキーマを参照し、エージェント出力をバリデーション・保存。他ステップから `{structured:step.field}` で参照可能 (#586, #622)
+- インタラクティブモードにスラッシュコマンド補完メニューを追加: `/` 入力時にインライン補完ドロップダウンを表示。矢印キーで選択、Tab で適用、Enter で確定。コンテキストに応じて `/retry` `/replay` の表示を制御 (#580)
+- Copilot プロバイダに `effort`（推論の深さ）設定を追加: `provider_options.copilot.effort` で `low` / `medium` / `high` / `xhigh` を指定可能 (#625)
+- `takt workflow init <name>` コマンドを追加: ワークフローのスキャフォールドを生成。`--template minimal|faceted`、`--steps <count>`、`--description <text>`、`--global` オプション対応 (#597)
+- `takt workflow doctor [targets]` コマンドを追加: ワークフロー YAML の定義を検証。ターゲット未指定時は `.takt/workflows/` 内の全ワークフローを検証。ワークフロー名またはファイルパスを指定可能 (#597)
+- 画面専用 API ポリシー（`screen-api`）を追加: 画面単位の専用エンドポイント、サーバー主導のページネーション、サーバーサイド集約、スコープ付きタブ通信を強制。全 dual 系ワークフローに適用
+- AI アンチパターンポリシーに早期キャッシュ戦略の禁止ルールを追加: 明示的な要求や計測なしにキャッシュレイヤー・localStorage キャッシュ・過度な memoization を導入することを REJECT
+
+### Changed
+
+- **BREAKING:** 旧用語 `piece` / `movement` を完全に廃止し、`workflow` / `step` に統一 (#602, #609)。ワークフロー YAML の `piece_config:` → `workflow_config:`、`movements:` → `steps:`、`initial_movement:` → `initial_step:`、`max_movements:` → `max_steps:` への移行が必須。ディレクトリも `~/.takt/pieces/` → `~/.takt/workflows/`、`.takt/pieces/` → `.takt/workflows/` に変更。レガシー環境変数（`TAKT_PIECE_*`）は引き続きマッピングされる
+- 非対応プロバイダ向けの provider-specific オプション（`claude.allowed_tools`、`mcp_servers`、`team_leader.part_allowed_tools`）をサイレントドロップするよう変更。ワークフローをプロバイダ非依存に保てるように改善
+- 全レビュー系インストラクションのエビデンスガイダンスを統一: `reopened` ステータスの追加、検証ターゲット・確認内容・観測結果の記録を必須化、オープン指摘事項の脱落防止ルールを追加
+
+### Fixed
+
+- 全 audit 系ワークフロー（7 種）で supervise ↔ review 間のデッドロックを修正。review ステップに `output_contracts` を追加し、ループモニターの閾値を 4→3 に調整、ジャッジの選択肢を 3 択（十分/進捗あり/停滞）に変更
+
+### Internal
+
+- `piece*` → `workflow*` のファイル名一括リネーム（84 ファイル、テスト・E2E フィクスチャ・ドキュメント含む）
+- `WorkflowEngine` をリファクタリング: `WorkflowEngineSetup`、`WorkflowEngineStepCoordinator`、`WorkflowRunLoop` に責務を分離
+- セッションロガーを `sessionLoggerPhaseTracker.ts`、`sessionLoggerRecordFactory.ts` に分割
+- `CapabilityAwareStructuredCaller` を追加し、プロバイダの構造化出力対応可否に応じたルーティングを実装
+- ルール評価を 10 段階フォールバックに拡張（`when:` 条件の評価ステージを追加）
+- `workflow-state-access.ts` でテンプレート参照（`{context:*}`、`{structured:*}`、`{effect:*}`）の統一解決を実装
+
 ## [0.35.4] - 2026-04-11
 
 ### Changed
