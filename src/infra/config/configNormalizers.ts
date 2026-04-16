@@ -8,6 +8,23 @@ import type {
   TaktProvidersConfig,
 } from '../../core/models/config-types.js';
 import { validateProviderModelCompatibility } from './providerModelCompatibility.js';
+import {
+  normalizeConfigProviderReferenceDetailed,
+  type ConfigProviderReference,
+} from './providerReference.js';
+
+function assertNormalizedPersonaProviderOptions(
+  persona: string,
+  providerOptions: unknown,
+): void {
+  if (providerOptions !== undefined) {
+    return;
+  }
+
+  throw new Error(
+    `Configuration error: persona_providers.${persona}.provider_options must include at least one provider-specific option`,
+  );
+}
 
 export function normalizeRuntime(
   runtime: { prepare?: string[] } | undefined,
@@ -130,21 +147,34 @@ export function denormalizeWorkflowOverrides(
 }
 
 export function normalizePersonaProviders(
-  raw: Record<string, string | { type?: string; provider?: string; model?: string }> | undefined,
+  raw: Record<string, string | {
+    type?: string;
+    provider?: string;
+    model?: string;
+    provider_options?: Record<string, unknown>;
+  }> | undefined,
 ): Record<string, PersonaProviderEntry> | undefined {
   if (!raw) return undefined;
   const entries = Object.entries(raw);
   if (entries.length === 0) return undefined;
 
   return Object.fromEntries(entries.map(([persona, entry]) => {
-    const normalizedEntry: PersonaProviderEntry = typeof entry === 'string'
-      ? { provider: entry as PersonaProviderEntry['provider'] }
-      : {
-        ...(entry.provider !== undefined || entry.type !== undefined
-          ? { provider: (entry.provider ?? entry.type) as PersonaProviderEntry['provider'] }
-          : {}),
-        ...(entry.model !== undefined ? { model: entry.model } : {}),
-      };
+    const rawProviderOptions = typeof entry === 'string' ? undefined : entry.provider_options;
+    const normalizedReference = normalizeConfigProviderReferenceDetailed(
+      (typeof entry === 'string' ? entry : (entry.provider ?? entry.type)) as ConfigProviderReference<NonNullable<PersonaProviderEntry['provider']>>,
+      typeof entry === 'string' ? undefined : entry.model,
+      rawProviderOptions,
+    );
+    if (rawProviderOptions !== undefined) {
+      assertNormalizedPersonaProviderOptions(persona, normalizedReference.providerOptions);
+    }
+    const normalizedEntry: PersonaProviderEntry = {
+      ...(normalizedReference.provider !== undefined ? { provider: normalizedReference.provider } : {}),
+      ...(normalizedReference.model !== undefined ? { model: normalizedReference.model } : {}),
+      ...(normalizedReference.providerOptions !== undefined
+        ? { providerOptions: normalizedReference.providerOptions }
+        : {}),
+    };
     validateProviderModelCompatibility(
       normalizedEntry.provider,
       normalizedEntry.model,
@@ -154,6 +184,45 @@ export function normalizePersonaProviders(
       },
     );
     return [persona, normalizedEntry];
+  }));
+}
+
+export function denormalizePersonaProviders(
+  personaProviders: Record<string, PersonaProviderEntry> | undefined,
+): Record<string, Record<string, unknown>> | undefined {
+  if (!personaProviders) {
+    return undefined;
+  }
+
+  const entries = Object.entries(personaProviders);
+  if (entries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(entries.map(([persona, entry]) => {
+    const rawEntry: Record<string, unknown> = {};
+    if (entry.provider !== undefined) {
+      rawEntry.provider = entry.provider;
+    }
+    if (entry.model !== undefined) {
+      rawEntry.model = entry.model;
+    }
+
+    const rawProviderOptions = denormalizeProviderOptions(entry.providerOptions);
+    if (entry.providerOptions !== undefined) {
+      assertNormalizedPersonaProviderOptions(persona, rawProviderOptions);
+    }
+    if (rawProviderOptions !== undefined) {
+      rawEntry.provider_options = rawProviderOptions;
+    }
+
+    if (Object.keys(rawEntry).length === 0) {
+      throw new Error(
+        `Configuration error: persona_providers.${persona} must include at least one of 'provider', 'model', or 'provider_options'`,
+      );
+    }
+
+    return [persona, rawEntry];
   }));
 }
 
@@ -285,6 +354,9 @@ export function denormalizeProviderOptions(
     if (Object.keys(claude).length > 0) {
       raw.claude = claude;
     }
+  }
+  if (providerOptions.copilot?.effort !== undefined) {
+    raw.copilot = { effort: providerOptions.copilot.effort };
   }
 
   return Object.keys(raw).length > 0 ? raw : undefined;

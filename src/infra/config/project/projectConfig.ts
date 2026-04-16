@@ -12,6 +12,7 @@ import {
   normalizeProviderProfiles,
   denormalizeProviderProfiles,
   denormalizeProviderOptions,
+  denormalizePersonaProviders,
   normalizePersonaProviders,
   normalizeTaktProviders,
   buildRawTaktProvidersOrThrow,
@@ -92,7 +93,12 @@ export function loadProjectConfig(projectDir: string): ProjectConfig {
     pipeline as { default_branch_prefix?: string; commit_message_template?: string; pr_body_template?: string } | undefined,
   );
   const normalizedPersonaProviders = normalizePersonaProviders(
-    persona_providers as Record<string, string | { type?: string; provider?: string; model?: string }> | undefined,
+    persona_providers as Record<string, string | {
+      type?: string;
+      provider?: string;
+      model?: string;
+      provider_options?: Record<string, unknown>;
+    }> | undefined,
   );
   const analyticsConfig = normalizeAnalytics(analytics as Record<string, unknown> | undefined);
   const normalizedTaktProviders = normalizeTaktProviders(
@@ -203,8 +209,9 @@ export function saveProjectConfig(projectDir: string, config: ProjectConfig): vo
     if (config.pipeline.prBodyTemplate !== undefined) pr.pr_body_template = config.pipeline.prBodyTemplate;
     if (Object.keys(pr).length > 0) savePayload.pipeline = pr;
   }
-  if (config.personaProviders && Object.keys(config.personaProviders).length > 0) {
-    savePayload.persona_providers = config.personaProviders;
+  const rawPersonaProviders = denormalizePersonaProviders(config.personaProviders);
+  if (rawPersonaProviders && Object.keys(rawPersonaProviders).length > 0) {
+    savePayload.persona_providers = rawPersonaProviders;
   } else {
     delete savePayload.persona_providers;
   }

@@ -36,14 +36,20 @@ interactive_preview_steps: 3      # インタラクティブモードでの step
 #     - gradle    # .runtime/ に Gradle キャッシュ/設定を準備
 #     - node      # .runtime/ に npm キャッシュを準備
 
-# persona ごとの provider / model 上書き（省略可）
+# persona ごとの provider / model / provider_options 上書き（省略可）
 # workflow を複製せずに特定の persona を別の provider / model にルーティング
 # persona_providers:
 #   coder:
 #     provider: codex        # coder を Codex で実行
 #     model: o3-mini         # 使用モデル（省略可）
+#     provider_options:
+#       codex:
+#         reasoning_effort: high
 #   ai-antipattern-reviewer:
 #     provider: claude       # レビュアーは Claude のまま
+#     provider_options:
+#       claude:
+#         effort: high
 
 # provider 固有のパーミッションプロファイル（省略可）
 # 優先順位: プロジェクト上書き > グローバル上書き > プロジェクトデフォルト > グローバルデフォルト > required_permission_mode（下限）
@@ -135,7 +141,7 @@ interactive_preview_steps: 3      # インタラクティブモードでの step
 | `auto_pr` | boolean | - | worktree 実行後に PR を自動作成 |
 | `minimal_output` | boolean | `false` | AI 出力を抑制（CI 向け） |
 | `runtime` | object | - | ランタイム環境デフォルト（例: `prepare: [gradle, node]`） |
-| `persona_providers` | object | - | persona ごとの provider / model 上書き（例: `coder: { provider: codex, model: o3-mini }`） |
+| `persona_providers` | object | - | persona ごとの provider / model / provider_options 上書き（例: `coder: { provider: codex, model: o3-mini, provider_options: { codex: { reasoning_effort: high } } }`） |
 | `provider_options` | object | - | グローバルな provider 固有オプション |
 | `provider_profiles` | object | - | provider 固有のパーミッションプロファイル |
 | `anthropic_api_key` | string | - | Claude 用 Anthropic API キー |
@@ -174,7 +180,7 @@ logging:
 concurrency: 2                # このプロジェクトでの takt run 並列タスク数（1-10）
 # base_branch: main           # クローン作成のベースブランチ（グローバルを上書き、デフォルト: リモートのデフォルトブランチ）
 
-# provider 固有オプション（グローバルを上書き、workflow/step で上書き可能）
+# provider 固有オプション（プロジェクト既定値。env 起源の leaf が最優先で、それ以外は step > workflow > persona > project > global の順）
 # provider_options:
 #   codex:
 #     network_access: true
@@ -294,11 +300,10 @@ copilot_cli_path: /usr/local/bin/github-copilot-cli
 
 ## モデル解決
 
-各 step で使用されるモデルは、次の優先順位（高い順）で解決されます。
+TAKT のモデル選択は 2 段階で解決されます。
 
-1. **Workflow step の `model`** - workflow YAML の step 定義で指定
-2. **グローバル設定の `model`** - `~/.takt/config.yaml` のデフォルトモデル
-3. **Provider デフォルト** - provider のビルトインデフォルトにフォールバック（Claude: `sonnet`、Codex: `codex`、OpenCode: provider デフォルト、Cursor: CLI デフォルト、Copilot: CLI デフォルト）
+1. **入力 `model` の解決** - workflow 実行前に、入力 `model` が CLI `--model`、次に config `model`、最後に provider デフォルトの順で解決されます。
+2. **Workflow step の `model` 解決** - 各 step では、実効モデルが `persona_providers[persona].model`、次に step YAML の `model`、最後に解決済みの入力 `model` の順で決まります。
 
 ### Provider 固有のモデルに関する注意
 
@@ -376,7 +381,7 @@ step の `required_permission_mode` は最低限の下限を設定します。pr
 
 ### Persona Provider
 
-workflow を複製せずに、特定の persona を別の provider や model にルーティングできます。
+workflow を複製せずに、特定の persona を別の provider、model、provider 固有オプションにルーティングできます。`~/.takt/config.yaml` と `.takt/config.yaml` のどちらでも定義できます。
 
 ```yaml
 # ~/.takt/config.yaml
@@ -384,11 +389,19 @@ persona_providers:
   coder:
     provider: codex        # coder persona を Codex で実行
     model: o3-mini         # 使用モデル（省略可）
+    provider_options:
+      codex:
+        reasoning_effort: high
   ai-antipattern-reviewer:
     provider: claude       # レビュアーは Claude のまま
+    provider_options:
+      claude:
+        effort: high
 ```
 
-`provider` と `model` はいずれも省略可能です。`model` の解決優先度: step YAML の `model` > `persona_providers[persona].model` > グローバル `model`。
+`provider`、`model`、`provider_options` は個別に省略できますが、各 persona entry には少なくとも 1 つ必要です。空の `provider_options` オブジェクトは受理されません。workflow step での `model` 優先順位は `persona_providers[persona].model` > step YAML の `model` > 解決済みの入力 `model` です。この入力 `model` は workflow 実行前に CLI `--model`、次に config の `model`、最後に provider デフォルトの順で解決されます。
+
+`provider_options` の優先順位は leaf ごとに解決されます。env 起源の config leaf が他のすべてのソースより優先され、それ以外は step `provider_options` > workflow `workflow_config.provider_options` > `persona_providers[persona].provider_options` > project `.takt/config.yaml` > global `~/.takt/config.yaml` の順です。
 
 これにより、単一の workflow 内で provider や model を混在させることができます。persona 名は step 定義の `persona` キーに対してマッチされます。
 

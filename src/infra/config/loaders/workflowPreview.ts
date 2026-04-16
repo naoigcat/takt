@@ -9,7 +9,10 @@ import {
 import { createLogger, getErrorMessage } from '../../../shared/utils/index.js';
 import { resolveWorkflowConfigValues } from '../resolveWorkflowConfigValue.js';
 import { resolveProviderOptionsWithTrace } from '../resolveConfigValue.js';
-import { resolveEffectiveProviderOptions } from '../providerOptions.js';
+import {
+  resolveEffectiveProviderOptions,
+  resolvePersonaProviderOptions,
+} from '../providerOptions.js';
 import { loadPersonaPromptFromPath } from './agentLoader.js';
 import { loadWorkflowByIdentifier } from './workflowResolver.js';
 
@@ -95,6 +98,10 @@ function resolvePreviewAllowedTools(
     resolution.providerOptionsOriginResolver,
     resolution.providerOptions,
     step.providerOptions,
+    resolvePersonaProviderOptions(
+      resolution.personaProviders,
+      step.personaDisplayName,
+    ),
   );
   const resolvedProvider = resolveStepProviderModel({
     step,

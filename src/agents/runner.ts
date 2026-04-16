@@ -9,8 +9,15 @@ import {
   loadGlobalConfig,
   loadPersonaPromptFromPath,
   loadProjectConfig,
-  resolveConfigValue,
 } from '../infra/config/index.js';
+import {
+  resolveConfigValue,
+  resolveProviderOptionsWithTrace,
+} from '../infra/config/resolveConfigValue.js';
+import {
+  resolveEffectiveProviderOptions,
+  resolvePersonaProviderOptions,
+} from '../infra/config/providerOptions.js';
 import { getProvider, type ProviderType, type ProviderCallOptions } from '../infra/providers/index.js';
 import type { AgentResponse, CustomAgentConfig } from '../core/models/index.js';
 import { resolveAgentProviderModel } from '../core/workflow/provider-resolution.js';
@@ -22,6 +29,11 @@ import type { RunAgentOptions } from './types.js';
 export type { RunAgentOptions, StreamCallback } from './types.js';
 
 const log = createLogger('runner');
+type ResolvedProviderOptionsHandoff = {
+  resolvedProviderOptions?: ProviderCallOptions['providerOptions'];
+};
+
+type RunnerHandoffOptions = RunAgentOptions & ResolvedProviderOptionsHandoff;
 
 /**
  * Agent execution runner.
@@ -30,6 +42,10 @@ const log = createLogger('runner');
  * delegates execution to the appropriate provider.
  */
 export class AgentRunner {
+  private static resolvePersonaProviders(cwd: string) {
+    return resolveConfigValue(cwd, 'personaProviders');
+  }
+
   private static resolveProviderAndModel(
     cwd: string,
     personaDisplayName: string | undefined,
@@ -39,18 +55,20 @@ export class AgentRunner {
     model: string | undefined;
     localConfig: ReturnType<typeof loadProjectConfig>;
     globalConfig: ReturnType<typeof loadGlobalConfig>;
+    personaProviders: ReturnType<typeof AgentRunner.resolvePersonaProviders>;
   } {
     const localConfig = loadProjectConfig(cwd);
     const globalConfig = loadGlobalConfig();
+    const personaProviders = AgentRunner.resolvePersonaProviders(cwd);
     if (options?.resolvedProvider) {
       return {
         provider: options.resolvedProvider,
         model: options.resolvedModel,
         localConfig,
         globalConfig,
+        personaProviders,
       };
     }
-    const personaProviders = resolveConfigValue(cwd, 'personaProviders');
     const resolved = resolveAgentProviderModel({
       cliProvider: options?.provider,
       cliModel: options?.model,
@@ -70,6 +88,7 @@ export class AgentRunner {
       model: resolved.model,
       localConfig,
       globalConfig,
+      personaProviders,
     };
   }
 
@@ -92,10 +111,40 @@ export class AgentRunner {
     return `${dir}/${name}`;
   }
 
+  private static resolveProviderOptions(
+    cwd: string,
+    personaDisplayName: string | undefined,
+    options: RunnerHandoffOptions,
+    personaProviders: ReturnType<typeof AgentRunner.resolvePersonaProviders>,
+  ): ProviderCallOptions['providerOptions'] {
+    if (options.resolvedProviderOptions !== undefined) {
+      return options.resolvedProviderOptions;
+    }
+
+    const personaProviderOptions = resolvePersonaProviderOptions(
+      personaProviders,
+      personaDisplayName,
+    );
+    const {
+      value: resolvedConfigProviderOptions,
+      source: providerOptionsSource,
+      originResolver: providerOptionsOriginResolver,
+    } = resolveProviderOptionsWithTrace(cwd);
+
+    return resolveEffectiveProviderOptions(
+      providerOptionsSource,
+      providerOptionsOriginResolver,
+      resolvedConfigProviderOptions,
+      options.providerOptions,
+      personaProviderOptions,
+    );
+  }
+
   /** Build ProviderCallOptions from RunAgentOptions */
   private static buildCallOptions(
     resolvedModel: string | undefined,
     resolvedProvider: ProviderType,
+    resolvedProviderOptions: ProviderCallOptions['providerOptions'],
     options: RunAgentOptions,
     localConfig: ReturnType<typeof loadProjectConfig>,
     globalConfig: ReturnType<typeof loadGlobalConfig>,
@@ -116,7 +165,7 @@ export class AgentRunner {
       maxTurns: options.maxTurns,
       model: resolvedModel,
       permissionMode,
-      providerOptions: options.providerOptions,
+      providerOptions: resolvedProviderOptions,
       onStream: options.onStream,
       onPermissionRequest: options.onPermissionRequest,
       onAskUserQuestion: options.onAskUserQuestion,
@@ -155,6 +204,16 @@ export class AgentRunner {
     const providerType = resolved.provider;
     const provider = getProvider(providerType);
     const resolvedSystemPrompt = loadAgentPrompt(agentConfig, options.cwd);
+    const customOptions: RunnerHandoffOptions = {
+      ...options,
+      allowedTools: options.allowedTools ?? agentConfig.allowedTools,
+    };
+    const resolvedProviderOptions = AgentRunner.resolveProviderOptions(
+      options.cwd,
+      agentConfig.name,
+      customOptions,
+      resolved.personaProviders,
+    );
 
     options.onPromptResolved?.({
       systemPrompt: resolvedSystemPrompt,
@@ -166,14 +225,10 @@ export class AgentRunner {
       systemPrompt: resolvedSystemPrompt,
     });
 
-    const customOptions: RunAgentOptions = {
-      ...options,
-      allowedTools: options.allowedTools ?? agentConfig.allowedTools,
-    };
-
     return agent.call(task, AgentRunner.buildCallOptions(
       resolved.model,
       providerType,
+      resolvedProviderOptions,
       customOptions,
       resolved.localConfig,
       resolved.globalConfig,
@@ -202,9 +257,16 @@ export class AgentRunner {
     const resolved = AgentRunner.resolveProviderAndModel(options.cwd, personaName, options);
     const providerType = resolved.provider;
     const provider = getProvider(providerType);
+    const resolvedProviderOptions = AgentRunner.resolveProviderOptions(
+      options.cwd,
+      personaName,
+      options as RunnerHandoffOptions,
+      resolved.personaProviders,
+    );
     const callOptions = AgentRunner.buildCallOptions(
       resolved.model,
       providerType,
+      resolvedProviderOptions,
       options,
       resolved.localConfig,
       resolved.globalConfig,

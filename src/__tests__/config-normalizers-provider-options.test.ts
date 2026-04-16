@@ -16,6 +16,7 @@ describe('denormalizeProviderOptions', () => {
           excludedCommands: ['npm test'],
         },
       },
+      copilot: { effort: 'high' },
     });
 
     expect(result).toEqual({
@@ -28,6 +29,7 @@ describe('denormalizeProviderOptions', () => {
           excluded_commands: ['npm test'],
         },
       },
+      copilot: { effort: 'high' },
     });
   });
 
@@ -59,6 +61,9 @@ describe('denormalizeProviderOptions', () => {
         allowedTools: ['Read'],
         effort: 'medium',
       },
+      copilot: {
+        effort: 'medium',
+      },
     });
 
     expect(result).toEqual({
@@ -68,6 +73,9 @@ describe('denormalizeProviderOptions', () => {
       },
       claude: {
         allowed_tools: ['Read'],
+        effort: 'medium',
+      },
+      copilot: {
         effort: 'medium',
       },
     });

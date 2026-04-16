@@ -450,6 +450,80 @@ steps:
     expect(options?.resolvedModel).toBeUndefined();
   });
 
+  it('workflow_call が provider を override しても child personaProviders の provider_options を保持する', async () => {
+    writeWorkflow(tmpDir, 'takt/coding.yaml', `name: takt/coding
+subworkflow:
+  callable: true
+initial_step: review
+max_steps: 5
+steps:
+  - name: review
+    persona: reviewer
+    instruction: "Review child workflow"
+    rules:
+      - condition: done
+        next: COMPLETE
+`);
+
+    const config = createParentWorkflow(tmpDir, {
+      name: 'parent',
+      initial_step: 'delegate',
+      max_steps: 10,
+      steps: [
+        {
+          name: 'delegate',
+          kind: 'workflow_call',
+          call: 'takt/coding',
+          overrides: {
+            provider: 'codex',
+          },
+          rules: [
+            {
+              condition: 'COMPLETE',
+              next: 'COMPLETE',
+            },
+          ],
+        },
+      ],
+    });
+
+    vi.mocked(runAgent).mockResolvedValueOnce(makeResponse({
+      persona: 'reviewer',
+      content: 'done',
+    }));
+    mockDetectMatchedRuleSequence([{ index: 0, method: 'phase1_tag' }]);
+
+    engine = new WorkflowEngine(config, tmpDir, 'Keep child persona provider options on workflow_call override', createWorkflowCallOptions(tmpDir, {
+      provider: 'claude',
+      model: 'parent-model',
+      providerOptions: {
+        codex: { networkAccess: false },
+      },
+      personaProviders: {
+        reviewer: {
+          provider: 'opencode',
+          model: 'reviewer-model',
+          providerOptions: {
+            codex: { reasoningEffort: 'high' },
+          },
+        },
+      },
+    }));
+
+    await engine.run();
+
+    const options = vi.mocked(runAgent).mock.calls[0]?.[2];
+
+    expect(options?.resolvedProvider).toBe('codex');
+    expect(options?.resolvedModel).toBeUndefined();
+    expect(options?.providerOptions).toEqual({
+      codex: {
+        networkAccess: false,
+        reasoningEffort: 'high',
+      },
+    });
+  });
+
   it('workflow_call が model だけ override しても child personaProviders の provider 解決を維持する', async () => {
     writeWorkflow(tmpDir, 'takt/coding.yaml', `name: takt/coding
 subworkflow:

@@ -199,22 +199,67 @@ export const StepQualityGatesOverrideSchema = z.object({
   quality_gates: QualityGatesSchema,
 }).optional();
 
+function hasPersonaProviderOptionsLeaf(
+  providerOptions: NonNullable<z.infer<typeof StepProviderOptionsSchema>>,
+): boolean {
+  return Object.values(providerOptions).some(hasDefinedProviderOptionLeaf);
+}
+
+function hasDefinedProviderOptionLeaf(value: unknown): boolean {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  if (value === null || typeof value !== 'object') {
+    return true;
+  }
+
+  return Object.values(value).some(hasDefinedProviderOptionLeaf);
+}
+
 export const PersonaProviderEntrySchema = z.object({
+  type: ProviderTypeSchema.optional(),
   provider: ProviderTypeSchema.optional(),
   model: z.string().optional(),
-}).strict().refine(
-  (entry) => entry.provider !== undefined || entry.model !== undefined,
-  { message: "persona_providers entry must include either 'provider' or 'model'" }
-);
+  provider_options: StepProviderOptionsSchema,
+}).strict().superRefine((entry, ctx) => {
+  if (entry.type !== undefined && entry.provider !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      message: "persona_providers entry cannot include both 'type' and 'provider'",
+    });
+  }
 
-export const PersonaProviderBlockSchema = z.object({
-  type: ProviderTypeSchema,
-  model: z.string().optional(),
-}).strict();
+  if (
+    entry.type === undefined
+    && entry.provider === undefined
+    && entry.model === undefined
+    && entry.provider_options === undefined
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: "persona_providers entry must include at least one of 'provider', 'type', 'model', or 'provider_options'",
+    });
+  }
+
+  if (
+    entry.provider_options !== undefined
+    && !hasPersonaProviderOptionsLeaf(entry.provider_options)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['provider_options'],
+      message: "persona_providers entry 'provider_options' must include at least one provider-specific option",
+    });
+  }
+});
 
 export const PersonaProviderReferenceSchema = z.union([
   ProviderTypeSchema,
-  PersonaProviderBlockSchema,
   PersonaProviderEntrySchema,
 ]);
 

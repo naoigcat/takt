@@ -36,14 +36,20 @@ interactive_preview_steps: 3      # Step previews in interactive mode (0-10, def
 #     - gradle    # Prepare Gradle cache/config in .runtime/
 #     - node      # Prepare npm cache in .runtime/
 
-# Per-persona provider/model overrides (optional)
+# Per-persona provider/model/provider_options overrides (optional)
 # Route specific personas to different providers and models without duplicating workflows
 # persona_providers:
 #   coder:
 #     provider: codex        # Run coder on Codex
 #     model: o3-mini         # Use o3-mini model (optional)
+#     provider_options:
+#       codex:
+#         reasoning_effort: high
 #   ai-antipattern-reviewer:
 #     provider: claude       # Keep reviewers on Claude
+#     provider_options:
+#       claude:
+#         effort: high
 
 # Provider-specific permission profiles (optional)
 # Priority: project override > global override > project default > global default > required_permission_mode (floor)
@@ -135,7 +141,7 @@ interactive_preview_steps: 3      # Step previews in interactive mode (0-10, def
 | `auto_pr` | boolean | - | Auto-create PR after worktree execution |
 | `minimal_output` | boolean | `false` | Suppress AI output (for CI) |
 | `runtime` | object | - | Runtime environment defaults (e.g., `prepare: [gradle, node]`) |
-| `persona_providers` | object | - | Per-persona provider/model overrides (e.g., `coder: { provider: codex, model: o3-mini }`) |
+| `persona_providers` | object | - | Per-persona provider/model/provider_options overrides (e.g., `coder: { provider: codex, model: o3-mini, provider_options: { codex: { reasoning_effort: high } } }`) |
 | `provider_options` | object | - | Global provider-specific options |
 | `provider_profiles` | object | - | Provider-specific permission profiles |
 | `anthropic_api_key` | string | - | Anthropic API key for Claude |
@@ -174,7 +180,7 @@ logging:
 concurrency: 2                # Parallel task count for takt run in this project (1-10)
 # base_branch: main           # Base branch for clone creation (overrides global, default: remote default branch)
 
-# Provider-specific options (overrides global, overridden by workflow/step)
+# Provider-specific options (project defaults; env-resolved leaf overrides win, otherwise step > workflow > persona > project > global)
 # provider_options:
 #   codex:
 #     network_access: true
@@ -294,11 +300,10 @@ Paths must be absolute paths to executable files. Environment variables take pre
 
 ## Model Resolution
 
-The model used for each step is resolved with the following priority order (highest first):
+TAKT resolves model selection in two stages:
 
-1. **Workflow step `model`** - Specified in the step definition in workflow YAML
-2. **Global config `model`** - Default model in `~/.takt/config.yaml`
-3. **Provider default** - Falls back to the provider's built-in default (Claude: `sonnet`, Codex: `codex`, OpenCode: provider default, Cursor: CLI default, Copilot: CLI default)
+1. **Base input model** - Before workflow execution starts, the input `model` is resolved from CLI `--model`, then config `model`, then the provider default.
+2. **Workflow step model** - For each workflow step, the effective model is resolved from `persona_providers[persona].model`, then step YAML `model`, then the already-resolved input `model`.
 
 ### Provider-specific Model Notes
 
@@ -376,7 +381,7 @@ The `required_permission_mode` on a step sets the minimum floor. If the resolved
 
 ### Persona Providers
 
-Route specific personas to different providers and models without duplicating workflows:
+Route specific personas to different providers, models, and provider-specific options without duplicating workflows. You can define this in either `~/.takt/config.yaml` or `.takt/config.yaml`:
 
 ```yaml
 # ~/.takt/config.yaml
@@ -384,11 +389,19 @@ persona_providers:
   coder:
     provider: codex        # Run coder persona on Codex
     model: o3-mini         # Use o3-mini model (optional)
+    provider_options:
+      codex:
+        reasoning_effort: high
   ai-antipattern-reviewer:
     provider: claude       # Keep reviewers on Claude
+    provider_options:
+      claude:
+        effort: high
 ```
 
-Both `provider` and `model` are optional. `model` resolution priority: step YAML `model` > `persona_providers[persona].model` > global `model`.
+`provider`, `model`, and `provider_options` are individually optional, but each persona entry must include at least one of them. Empty `provider_options` objects are rejected. In workflow step resolution, `model` priority is `persona_providers[persona].model` > step YAML `model` > resolved input `model`. That input `model` is resolved before workflow execution from CLI `--model`, then config `model`, then the provider default.
+
+`provider_options` priority is resolved per leaf. An env-resolved config leaf overrides all other sources. Otherwise the order is: step `provider_options` > workflow `workflow_config.provider_options` > `persona_providers[persona].provider_options` > project `.takt/config.yaml` > global `~/.takt/config.yaml`.
 
 This allows mixing providers and models within a single workflow. The persona name is matched against the `persona` key in the step definition.
 

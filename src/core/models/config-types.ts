@@ -15,6 +15,7 @@ import type { VcsProviderType } from './vcs-types.js';
 export interface PersonaProviderEntry {
   provider?: ProviderType;
   model?: string;
+  providerOptions?: StepProviderOptions;
 }
 
 export interface TaktProviderEntry {

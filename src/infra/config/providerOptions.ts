@@ -4,6 +4,7 @@ import type {
   CopilotEffort,
   StepProviderOptions,
 } from '../../core/models/workflow-types.js';
+import type { PersonaProviderEntry } from '../../core/models/config-types.js';
 import type {
   ProviderOptionsOriginResolver,
   ProviderOptionsSource,
@@ -168,13 +169,24 @@ export function resolveProviderOptionOrigin(
 
 function selectProviderValue<T>(
   configValue: T | undefined,
+  personaValue: T | undefined,
   stepValue: T | undefined,
   origin: ProviderOptionsTraceOrigin,
 ): T | undefined {
-  if (origin === 'env' || origin === 'cli') {
-    return configValue ?? stepValue;
+  if ((origin === 'env' || origin === 'cli') && configValue !== undefined) {
+    return configValue;
   }
-  return stepValue ?? configValue;
+  return stepValue ?? personaValue ?? configValue;
+}
+
+export function resolvePersonaProviderOptions(
+  personaProviders: Record<string, PersonaProviderEntry> | undefined,
+  personaDisplayName: string | undefined,
+): StepProviderOptions | undefined {
+  if (!personaDisplayName) {
+    return undefined;
+  }
+  return personaProviders?.[personaDisplayName]?.providerOptions;
 }
 
 export function resolveEffectiveProviderOptions(
@@ -182,23 +194,26 @@ export function resolveEffectiveProviderOptions(
   originResolver: ProviderOptionsOriginResolver | undefined,
   resolvedConfigOptions: StepProviderOptions | undefined,
   stepOptions: StepProviderOptions | undefined,
+  personaOptions?: StepProviderOptions,
 ): StepProviderOptions | undefined {
   if (!resolvedConfigOptions) {
-    return stepOptions;
+    return mergeProviderOptions(personaOptions, stepOptions);
   }
-  if (!stepOptions) {
+  if (!personaOptions && !stepOptions) {
     return resolvedConfigOptions;
   }
 
   const claudeSandbox = {
     allowUnsandboxedCommands: selectProviderValue(
       resolvedConfigOptions.claude?.sandbox?.allowUnsandboxedCommands,
-      stepOptions.claude?.sandbox?.allowUnsandboxedCommands,
+      personaOptions?.claude?.sandbox?.allowUnsandboxedCommands,
+      stepOptions?.claude?.sandbox?.allowUnsandboxedCommands,
       resolveProviderOptionOrigin(originResolver, 'claude.sandbox.allowUnsandboxedCommands', source),
     ),
     excludedCommands: selectProviderValue(
       resolvedConfigOptions.claude?.sandbox?.excludedCommands,
-      stepOptions.claude?.sandbox?.excludedCommands,
+      personaOptions?.claude?.sandbox?.excludedCommands,
+      stepOptions?.claude?.sandbox?.excludedCommands,
       resolveProviderOptionOrigin(originResolver, 'claude.sandbox.excludedCommands', source),
     ),
   };
@@ -209,34 +224,40 @@ export function resolveEffectiveProviderOptions(
       : undefined,
     allowedTools: selectProviderValue(
       resolvedConfigOptions.claude?.allowedTools,
-      stepOptions.claude?.allowedTools,
+      personaOptions?.claude?.allowedTools,
+      stepOptions?.claude?.allowedTools,
       resolveProviderOptionOrigin(originResolver, 'claude.allowedTools', source),
     ),
     effort: selectProviderValue(
       resolvedConfigOptions.claude?.effort,
-      stepOptions.claude?.effort,
+      personaOptions?.claude?.effort,
+      stepOptions?.claude?.effort,
       resolveProviderOptionOrigin(originResolver, 'claude.effort', source),
     ),
   };
 
   const codexNetworkAccess = selectProviderValue(
     resolvedConfigOptions.codex?.networkAccess,
-    stepOptions.codex?.networkAccess,
+    personaOptions?.codex?.networkAccess,
+    stepOptions?.codex?.networkAccess,
     resolveProviderOptionOrigin(originResolver, 'codex.networkAccess', source),
   );
   const codexReasoningEffort = selectProviderValue(
     resolvedConfigOptions.codex?.reasoningEffort,
-    stepOptions.codex?.reasoningEffort,
+    personaOptions?.codex?.reasoningEffort,
+    stepOptions?.codex?.reasoningEffort,
     resolveProviderOptionOrigin(originResolver, 'codex.reasoningEffort', source),
   );
   const opencodeNetworkAccess = selectProviderValue(
     resolvedConfigOptions.opencode?.networkAccess,
-    stepOptions.opencode?.networkAccess,
+    personaOptions?.opencode?.networkAccess,
+    stepOptions?.opencode?.networkAccess,
     resolveProviderOptionOrigin(originResolver, 'opencode.networkAccess', source),
   );
   const copilotEffort = selectProviderValue(
     resolvedConfigOptions.copilot?.effort,
-    stepOptions.copilot?.effort,
+    personaOptions?.copilot?.effort,
+    stepOptions?.copilot?.effort,
     resolveProviderOptionOrigin(originResolver, 'copilot.effort', source),
   );
 
@@ -304,12 +325,14 @@ export function resolveEffectiveTeamLeaderPartProviderOptions(
   stepOptions: StepProviderOptions | undefined,
   resolvedProvider: ProviderType | undefined,
   partAllowedTools: string[] | undefined,
+  personaOptions?: StepProviderOptions,
 ): StepProviderOptions | undefined {
   const mergedProviderOptions = resolveEffectiveProviderOptions(
     source,
     originResolver,
     resolvedConfigOptions,
     stepOptions,
+    personaOptions,
   );
 
   const shouldStripClaudeTools = partAllowedTools !== undefined

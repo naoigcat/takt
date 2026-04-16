@@ -119,7 +119,7 @@ steps:
 Settings are merged with the following priority (highest wins):
 
 ```
-Step > Workflow > Project (.takt/config.yaml) > Global (~/.takt/config.yaml)
+Env-resolved config leaf > Step > Workflow > Persona > Project (.takt/config.yaml) > Global (~/.takt/config.yaml)
 ```
 
 ### Codex sandbox mode reference
@@ -209,7 +209,7 @@ provider_options:
 
 ### Configuration levels
 
-Same 4-level merge as Codex (Step > Workflow > Project > Global). See the Codex section above for examples at each level.
+Same merge order as Codex: Env-resolved config leaf > Step > Workflow > Persona > Project > Global. See the Codex section above for examples at each level.
 
 ### Security comparison
 
@@ -325,22 +325,31 @@ provider_profiles:
 persona_providers:
   coder:
     provider: codex
+    provider_options:
+      codex:
+        network_access: true
   reviewer:
     provider: claude
+    provider_options:
+      claude:
+        sandbox:
+          allow_unsandboxed_commands: true
 ```
 
 ## Configuration Priority Summary
 
 Provider options (`provider_options`) and permission profiles (`provider_profiles`) are resolved from multiple sources. Higher priority wins:
 
-**Provider options** (merged, higher overrides lower):
+**Provider options** (merged per leaf, higher overrides lower):
 
 | Priority | Source | Example |
 |----------|--------|---------|
-| 1 (highest) | Step `provider_options` | `steps[].provider_options.codex.network_access` |
-| 2 | Workflow `workflow_config.provider_options` | `workflow_config.provider_options.codex.network_access` |
-| 3 | Project `.takt/config.yaml` | `provider_options.codex.network_access` |
-| 4 (lowest) | Global `~/.takt/config.yaml` | `provider_options.codex.network_access` |
+| 1 (highest) | Env-resolved config leaf | `TAKT_PROVIDER_OPTIONS_CODEX_NETWORK_ACCESS` -> `provider_options.codex.network_access` |
+| 2 | Step `provider_options` | `steps[].provider_options.codex.network_access` |
+| 3 | Workflow `workflow_config.provider_options` | `workflow_config.provider_options.codex.network_access` |
+| 4 | Persona `persona_providers.<persona>.provider_options` | `persona_providers.coder.provider_options.codex.network_access` |
+| 5 | Project `.takt/config.yaml` | `provider_options.codex.network_access` |
+| 6 (lowest) | Global `~/.takt/config.yaml` | `provider_options.codex.network_access` |
 
 **Permission mode** (first match wins):
 

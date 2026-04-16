@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GlobalConfigSchema } from '../core/models/index.js';
 import {
+  PersonaProviderEntrySchema,
   ProviderBlockSchema,
   ProviderPermissionProfilesSchema,
   ProviderReferenceSchema,
@@ -52,6 +53,36 @@ describe('Claude provider split (Zod)', () => {
           network_access: true,
         }),
       ).toThrow(/network_access/i);
+    });
+  });
+
+  describe('PersonaProviderEntrySchema', () => {
+    it('Given empty nested provider_options object, When parse, Then fails', () => {
+      expect(() =>
+        PersonaProviderEntrySchema.parse({
+          provider_options: {
+            claude: {
+              sandbox: {},
+            },
+          },
+        }),
+      ).toThrow(/provider_options/i);
+    });
+
+    it('Given nested provider_options leaf, When parse, Then succeeds', () => {
+      const parsed = PersonaProviderEntrySchema.parse({
+        provider_options: {
+          claude: {
+            sandbox: {
+              excluded_commands: ['rm'],
+            },
+          },
+        },
+      });
+
+      expect(parsed.provider_options?.claude?.sandbox).toEqual({
+        excluded_commands: ['rm'],
+      });
     });
   });
 

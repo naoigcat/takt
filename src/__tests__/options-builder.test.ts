@@ -159,6 +159,38 @@ describe('OptionsBuilder.buildBaseOptions', () => {
     });
   });
 
+  it('lets persona provider_options override project provider options when step has none', () => {
+    const step = createStep({ personaDisplayName: 'reviewer' });
+    const builder = createBuilder(step, {
+      providerOptionsSource: 'project',
+      providerOptions: {
+        codex: { networkAccess: true, reasoningEffort: 'low' },
+        claude: {
+          allowedTools: ['Read', 'Glob'],
+          sandbox: { allowUnsandboxedCommands: false },
+        },
+      },
+      personaProviders: {
+        reviewer: {
+          providerOptions: {
+            codex: { reasoningEffort: 'high' },
+            claude: { allowedTools: ['Read', 'Edit'] },
+          },
+        },
+      },
+    });
+
+    const options = builder.buildBaseOptions(step);
+
+    expect(options.providerOptions).toEqual({
+      codex: { networkAccess: true, reasoningEffort: 'high' },
+      claude: {
+        allowedTools: ['Read', 'Edit'],
+        sandbox: { allowUnsandboxedCommands: false },
+      },
+    });
+  });
+
   it('uses nested env origin to keep config value only for the overridden leaf', () => {
     const step = createStep({
       providerOptions: {
@@ -184,6 +216,32 @@ describe('OptionsBuilder.buildBaseOptions', () => {
     expect(options.providerOptions).toEqual({
       codex: { networkAccess: true },
       claude: { allowedTools: ['Read', 'Edit'] },
+    });
+  });
+
+  it('keeps env-origin config leaf ahead of persona provider_options', () => {
+    const step = createStep({ personaDisplayName: 'reviewer' });
+    const builder = createBuilder(step, {
+      providerOptionsSource: 'project',
+      providerOptionsOriginResolver: (path: string) => (
+        path === 'codex.reasoningEffort' ? 'env' : 'default'
+      ),
+      providerOptions: {
+        codex: { reasoningEffort: 'low' },
+      },
+      personaProviders: {
+        reviewer: {
+          providerOptions: {
+            codex: { reasoningEffort: 'high' },
+          },
+        },
+      },
+    });
+
+    const options = builder.buildBaseOptions(step);
+
+    expect(options.providerOptions).toEqual({
+      codex: { reasoningEffort: 'low' },
     });
   });
 });

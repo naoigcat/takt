@@ -310,6 +310,41 @@ steps:
     expect(result.stepPreviews[0]?.allowedTools).toEqual(['Read', 'Bash']);
   });
 
+  it('should resolve preview tools from persona_providers provider_options', () => {
+    writeProjectConfig(tempDir, `provider: claude
+provider_options:
+  claude:
+    allowed_tools:
+      - Read
+persona_providers:
+  coder:
+    provider_options:
+      claude:
+        allowed_tools:
+          - Read
+          - Edit
+          - Bash
+`);
+
+    const workflowYaml = `name: preview-persona-tools
+initial_step: implement
+max_steps: 1
+
+steps:
+  - name: implement
+    persona: coder
+    instruction: "Implement the task"
+    edit: true
+`;
+
+    const workflowPath = join(tempDir, 'preview-persona-tools.yaml');
+    writeFileSync(workflowPath, workflowYaml);
+
+    const result = getWorkflowSummary(workflowPath, tempDir, 1);
+
+    expect(result.stepPreviews[0]?.allowedTools).toEqual(['Read', 'Edit', 'Bash']);
+  });
+
   it('should silently drop preview tools when configured for a non-Claude provider', () => {
     const workflowYaml = `name: preview-invalid-tools
 initial_step: plan

@@ -51,6 +51,9 @@ export function applyWorkflowCallOverridesToPersonaProviders(
       } else if (overrides.provider === undefined && entry.model !== undefined) {
         nextEntry.model = entry.model;
       }
+      if (entry.providerOptions !== undefined) {
+        nextEntry.providerOptions = entry.providerOptions;
+      }
 
       return [persona, nextEntry];
     }),

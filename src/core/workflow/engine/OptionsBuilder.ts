@@ -7,6 +7,7 @@ import type { PhaseRunnerContext } from '../phase-runner.js';
 import {
   resolveEffectiveProviderOptions,
   resolveEffectiveTeamLeaderPartProviderOptions,
+  resolvePersonaProviderOptions,
 } from '../../../infra/config/providerOptions.js';
 import {
   assertProviderResolvedForCapabilitySensitiveOptions,
@@ -68,6 +69,11 @@ export class OptionsBuilder {
     step: WorkflowStep,
     runtime?: RuntimeStepResolution,
   ): StepProviderOptions | undefined {
+    const personaProviderOptions = resolvePersonaProviderOptions(
+      this.engineOptions.personaProviders,
+      step.personaDisplayName,
+    );
+
     if (runtime?.teamLeaderPart) {
       return resolveEffectiveTeamLeaderPartProviderOptions(
         this.engineOptions.providerOptionsSource,
@@ -76,6 +82,7 @@ export class OptionsBuilder {
         step.providerOptions,
         this.resolveStepProviderModel(step, runtime).provider,
         runtime.teamLeaderPart.partAllowedTools,
+        personaProviderOptions,
       );
     }
 
@@ -84,6 +91,7 @@ export class OptionsBuilder {
       this.engineOptions.providerOptionsOriginResolver,
       this.engineOptions.providerOptions,
       step.providerOptions,
+      personaProviderOptions,
     );
   }
 
@@ -98,7 +106,8 @@ export class OptionsBuilder {
     const currentPosition = currentIndex >= 0 ? `${currentIndex + 1}/${steps.length}` : '?/?';
     const { provider: resolvedProvider, model: resolvedModel } = this.resolveStepProviderModel(step, runtime);
 
-    return {
+    const providerOptions = mergedProviderOptions ?? this.resolveMergedProviderOptions(step, runtime);
+    const baseOptions: RunAgentOptions & { resolvedProviderOptions?: StepProviderOptions } = {
       cwd: this.getCwd(),
       projectCwd: this.getProjectCwd(),
       abortSignal: this.engineOptions.abortSignal,
@@ -110,7 +119,8 @@ export class OptionsBuilder {
         requiredPermissionMode: step.requiredPermissionMode,
         providerProfiles: this.engineOptions.providerProfiles,
       },
-      providerOptions: mergedProviderOptions ?? this.resolveMergedProviderOptions(step, runtime),
+      providerOptions,
+      resolvedProviderOptions: providerOptions,
       language: this.getLanguage(),
       onStream: this.engineOptions.onStream,
       onPermissionRequest: this.engineOptions.onPermissionRequest,
@@ -124,6 +134,7 @@ export class OptionsBuilder {
         currentPosition,
       },
     };
+    return baseOptions;
   }
 
   /** Build RunAgentOptions for Phase 1 (main execution) */

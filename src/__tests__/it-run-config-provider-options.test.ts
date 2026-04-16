@@ -139,6 +139,31 @@ describe('IT: runAllTasks provider_options reflection', () => {
     });
   });
 
+  it('project persona_providers provider_options should override project provider_options in runAllTasks flow', async () => {
+    setProjectConfig(env.projectDir, [
+      'provider: claude',
+      'provider_options:',
+      '  claude:',
+      '    allowed_tools:',
+      '      - Read',
+      'persona_providers:',
+      '  planner:',
+      '    provider_options:',
+      '      claude:',
+      '        allowed_tools:',
+      '          - Read',
+      '          - Edit',
+    ].join('\n'));
+
+    await runAllTasksNoWorkflow(env.projectDir);
+
+    const options = vi.mocked(runAgent).mock.calls[0]?.[2];
+    expect(options?.providerOptions).toEqual({
+      claude: { allowedTools: ['Read', 'Edit'] },
+    });
+    expect(options?.allowedTools).toEqual(['Read', 'Edit']);
+  });
+
   it('env provider_options should override yaml in runAllTasks flow', async () => {
     setGlobalConfig(env.globalDir, [
       'provider_options:',

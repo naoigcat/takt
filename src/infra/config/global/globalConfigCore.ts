@@ -209,7 +209,12 @@ export class GlobalConfigManager {
         } | undefined,
       ),
       personaProviders: normalizePersonaProviders(
-        parsed.persona_providers as Record<string, string | { type?: string; provider?: string; model?: string }> | undefined,
+        parsed.persona_providers as Record<string, string | {
+          type?: string;
+          provider?: string;
+          model?: string;
+          provider_options?: Record<string, unknown>;
+        }> | undefined,
       ),
       branchNameStrategy: parsed.branch_name_strategy as GlobalConfig['branchNameStrategy'],
       minimalOutput: parsed.minimal_output as boolean | undefined,

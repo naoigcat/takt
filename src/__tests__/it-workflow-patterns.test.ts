@@ -57,6 +57,11 @@ vi.mock('../infra/config/resolveConfigValue.js', () => ({
     }
     return result;
   }),
+  resolveProviderOptionsWithTrace: vi.fn(() => ({
+    value: undefined,
+    source: 'default',
+    originResolver: () => 'default',
+  })),
 }));
 
 // --- Imports (after mocks) ---

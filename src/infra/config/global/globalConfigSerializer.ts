@@ -1,6 +1,7 @@
 import type { GlobalConfig } from '../../../core/models/config-types.js';
 import {
   denormalizeProviderProfiles,
+  denormalizePersonaProviders,
   denormalizeWorkflowOverrides,
   denormalizeProviderOptions,
 } from '../configNormalizers.js';
@@ -190,8 +191,9 @@ export function serializeGlobalConfig(config: GlobalConfig): Record<string, unkn
     }
     if (Object.keys(pipelineRaw).length > 0) raw.pipeline = pipelineRaw;
   }
-  if (config.personaProviders && Object.keys(config.personaProviders).length > 0) {
-    raw.persona_providers = config.personaProviders;
+  const rawPersonaProviders = denormalizePersonaProviders(config.personaProviders);
+  if (rawPersonaProviders && Object.keys(rawPersonaProviders).length > 0) {
+    raw.persona_providers = rawPersonaProviders;
   }
   if (config.branchNameStrategy !== undefined) {
     raw.branch_name_strategy = config.branchNameStrategy;

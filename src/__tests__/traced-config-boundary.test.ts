@@ -137,6 +137,56 @@ describe('traced config boundaries', () => {
     }
   });
 
+  it('project config loader は TAKT_PERSONA_PROVIDERS の nested provider_options を traced config 経路で保持する', () => {
+    const tempDir = join(tmpdir(), `takt-traced-persona-providers-${randomUUID()}`);
+    const configDir = join(tempDir, '.takt');
+    const configPath = join(configDir, 'config.yaml');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(
+      configPath,
+      [
+        'persona_providers:',
+        '  coder:',
+        '    provider: codex',
+        '    provider_options:',
+        '      codex:',
+        '        reasoning_effort: low',
+      ].join('\n'),
+      'utf-8',
+    );
+    process.env.TAKT_PERSONA_PROVIDERS = JSON.stringify({
+      coder: {
+        provider: 'codex',
+        provider_options: {
+          codex: {
+            reasoning_effort: 'high',
+          },
+        },
+      },
+    });
+
+    try {
+      const { rawConfig, trace } = loadProjectConfigTrace(configPath);
+
+      expect(rawConfig).toEqual({
+        persona_providers: {
+          coder: {
+            provider: 'codex',
+            provider_options: {
+              codex: {
+                reasoning_effort: 'high',
+              },
+            },
+          },
+        },
+      });
+      expect(trace.getOrigin('persona_providers.coder.provider_options')).toBe('env');
+      expect(trace.getOrigin('persona_providers.coder.provider_options.codex.reasoning_effort')).toBe('env');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('runtime bridge は cwd 配下の偽 traced-config を読まずに TAKT 同梱依存を使う', () => {
     const tempDir = join(tmpdir(), `takt-traced-runtime-${randomUUID()}`);
     const fakeModuleDir = join(tempDir, 'node_modules', 'traced-config');

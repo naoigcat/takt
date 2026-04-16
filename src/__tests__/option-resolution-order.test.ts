@@ -7,6 +7,7 @@ const {
   loadProjectConfigMock,
   loadGlobalConfigMock,
   resolveConfigValueMock,
+  resolveProviderOptionsWithTraceMock,
   loadTemplateMock,
   providerSetupMock,
   providerCallMock,
@@ -21,6 +22,7 @@ const {
     loadProjectConfigMock: vi.fn(),
     loadGlobalConfigMock: vi.fn(),
     resolveConfigValueMock: vi.fn(),
+    resolveProviderOptionsWithTraceMock: vi.fn(),
     loadTemplateMock: vi.fn(),
     providerSetupMock: providerSetup,
     providerCallMock: providerCall,
@@ -34,9 +36,13 @@ vi.mock('../infra/providers/index.js', () => ({
 vi.mock('../infra/config/index.js', () => ({
   loadProjectConfig: loadProjectConfigMock,
   loadGlobalConfig: loadGlobalConfigMock,
-  resolveConfigValue: resolveConfigValueMock,
   loadCustomAgents: loadCustomAgentsMock,
   loadAgentPrompt: loadAgentPromptMock,
+}));
+
+vi.mock('../infra/config/resolveConfigValue.js', () => ({
+  resolveConfigValue: resolveConfigValueMock,
+  resolveProviderOptionsWithTrace: resolveProviderOptionsWithTraceMock,
 }));
 
 vi.mock('../shared/prompts/index.js', () => ({
@@ -44,6 +50,7 @@ vi.mock('../shared/prompts/index.js', () => ({
 }));
 
 import { runAgent } from '../agents/runner.js';
+import type { RunAgentOptions } from '../agents/runner.js';
 
 describe('option resolution order', () => {
   beforeEach(() => {
@@ -56,11 +63,11 @@ describe('option resolution order', () => {
       concurrency: 1,
       taskPollIntervalMs: 500,
     });
-    resolveConfigValueMock.mockImplementation((_cwd: string, key: string) => {
-      if (key === 'personaProviders') {
-        return loadProjectConfigMock.mock.results.at(-1)?.value?.personaProviders;
-      }
-      return undefined;
+    resolveConfigValueMock.mockReturnValue(undefined);
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: undefined,
+      source: 'default',
+      originResolver: () => 'default',
     });
     loadCustomAgentsMock.mockReturnValue(new Map());
     loadAgentPromptMock.mockReturnValue('prompt');
@@ -98,6 +105,9 @@ describe('option resolution order', () => {
   });
 
   it('should apply persona provider override before local/global config', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      coder: { provider: 'claude' },
+    });
     loadProjectConfigMock.mockReturnValue({
       provider: 'opencode',
       personaProviders: {
@@ -118,7 +128,61 @@ describe('option resolution order', () => {
     expect(getProviderMock).toHaveBeenLastCalledWith('claude');
   });
 
+  it('should ignore global personaProviders when project personaProviders key exists', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      coder: { provider: 'codex' },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'mock',
+      personaProviders: {
+        coder: { provider: 'codex' },
+      },
+    });
+    loadGlobalConfigMock.mockReturnValue({
+      provider: 'claude',
+      personaProviders: {
+        reviewer: { provider: 'opencode' },
+      },
+      language: 'en',
+      concurrency: 1,
+      taskPollIntervalMs: 500,
+    });
+
+    await runAgent('reviewer', 'task', {
+      cwd: '/repo',
+    });
+
+    expect(getProviderMock).toHaveBeenLastCalledWith('mock');
+  });
+
+  it('should honor env-resolved personaProviders in standalone runAgent calls', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      reviewer: { provider: 'codex' },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'mock',
+      personaProviders: {
+        reviewer: { provider: 'claude' },
+      },
+    });
+    loadGlobalConfigMock.mockReturnValue({
+      provider: 'claude',
+      language: 'en',
+      concurrency: 1,
+      taskPollIntervalMs: 500,
+    });
+
+    await runAgent('reviewer', 'task', {
+      cwd: '/repo',
+    });
+
+    expect(getProviderMock).toHaveBeenLastCalledWith('codex');
+  });
+
   it('should resolve model in order: CLI > persona > local > global', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      coder: { model: 'persona-model' },
+    });
     loadGlobalConfigMock.mockReturnValue({
       provider: 'claude',
       model: 'global-model',
@@ -218,6 +282,208 @@ describe('option resolution order', () => {
     );
   });
 
+  it('should merge persona providerOptions into standalone runAgent calls', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      conductor: {
+        providerOptions: {
+          claude: {
+            effort: 'high',
+          },
+        },
+      },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'claude',
+      providerOptions: {
+        claude: {
+          sandbox: {
+            excludedCommands: ['rm'],
+          },
+        },
+      },
+      personaProviders: {
+        conductor: {
+          providerOptions: {
+            claude: {
+              effort: 'high',
+            },
+          },
+        },
+      },
+    });
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: {
+        claude: {
+          sandbox: {
+            excludedCommands: ['rm'],
+          },
+        },
+      },
+      source: 'project',
+      originResolver: () => 'local',
+    });
+
+    await runAgent('conductor', 'task', {
+      cwd: '/repo',
+      providerOptions: {
+        claude: {
+          sandbox: {
+            allowUnsandboxedCommands: false,
+          },
+        },
+      },
+    });
+
+    expect(providerCallMock).toHaveBeenLastCalledWith(
+      'task',
+      expect.objectContaining({
+        providerOptions: {
+          claude: {
+            effort: 'high',
+            sandbox: {
+              allowUnsandboxedCommands: false,
+              excludedCommands: ['rm'],
+            },
+          },
+        },
+      }),
+    );
+  });
+
+  it('should keep env-origin config leaf ahead of persona and explicit providerOptions in standalone runAgent calls', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      conductor: {
+        providerOptions: {
+          codex: {
+            reasoningEffort: 'high',
+            networkAccess: true,
+          },
+        },
+      },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'codex',
+      personaProviders: {
+        conductor: {
+          providerOptions: {
+            codex: {
+              reasoningEffort: 'high',
+              networkAccess: true,
+            },
+          },
+        },
+      },
+    });
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: {
+        codex: {
+          reasoningEffort: 'low',
+          networkAccess: true,
+        },
+      },
+      source: 'project',
+      originResolver: (path: string) => (
+        path === 'codex.reasoningEffort' ? 'env' : 'local'
+      ),
+    });
+
+    await runAgent('conductor', 'task', {
+      cwd: '/repo',
+      providerOptions: {
+        codex: {
+          reasoningEffort: 'medium',
+          networkAccess: false,
+        },
+      },
+    });
+
+    expect(providerCallMock).toHaveBeenLastCalledWith(
+      'task',
+      expect.objectContaining({
+        providerOptions: {
+          codex: {
+            reasoningEffort: 'low',
+            networkAccess: false,
+          },
+        },
+      }),
+    );
+  });
+
+  it('should pass resolvedProviderOptions through without re-merging raw providerOptions', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      coder: {
+        providerOptions: {
+          claude: {
+            allowedTools: ['Read', 'Edit', 'Bash', 'WebSearch'],
+          },
+        },
+      },
+    });
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: {
+        claude: {
+          allowedTools: ['Read', 'Edit', 'Bash', 'WebSearch'],
+          sandbox: {
+            allowUnsandboxedCommands: true,
+          },
+        },
+      },
+      source: 'project',
+      originResolver: () => 'local',
+    });
+
+    const handoffOptions: RunAgentOptions & {
+      resolvedProviderOptions: {
+        opencode: {
+          networkAccess: boolean;
+        };
+        claude: {
+          sandbox: {
+            allowUnsandboxedCommands: boolean;
+          };
+        };
+      };
+    } = {
+      cwd: '/repo',
+      provider: 'opencode',
+      resolvedProvider: 'opencode',
+      providerOptions: {
+        claude: {
+          allowedTools: ['Read', 'Edit', 'Bash', 'WebSearch'],
+        },
+      },
+      resolvedProviderOptions: {
+        opencode: {
+          networkAccess: true,
+        },
+        claude: {
+          sandbox: {
+            allowUnsandboxedCommands: true,
+          },
+        },
+      },
+    };
+
+    await runAgent('coder', 'task', handoffOptions);
+
+    expect(providerCallMock).toHaveBeenLastCalledWith(
+      'task',
+      expect.objectContaining({
+        providerOptions: {
+          opencode: {
+            networkAccess: true,
+          },
+          claude: {
+            sandbox: {
+              allowUnsandboxedCommands: true,
+            },
+          },
+        },
+      }),
+    );
+  });
+
   it('should ignore custom agent provider/model overrides', async () => {
     loadProjectConfigMock.mockReturnValue({ provider: 'claude', model: 'project-model' });
     loadGlobalConfigMock.mockReturnValue({
@@ -237,6 +503,140 @@ describe('option resolution order', () => {
     expect(providerCallMock).toHaveBeenLastCalledWith(
       'task',
       expect.objectContaining({ model: 'project-model' }),
+    );
+  });
+
+  it('should merge persona providerOptions into custom agent runAgent calls', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      custom: {
+        providerOptions: {
+          claude: {
+            effort: 'high',
+          },
+        },
+      },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'claude',
+      providerOptions: {
+        claude: {
+          sandbox: {
+            excludedCommands: ['rm'],
+          },
+        },
+      },
+      personaProviders: {
+        custom: {
+          providerOptions: {
+            claude: {
+              effort: 'high',
+            },
+          },
+        },
+      },
+    });
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: {
+        claude: {
+          sandbox: {
+            excludedCommands: ['rm'],
+          },
+        },
+      },
+      source: 'project',
+      originResolver: () => 'local',
+    });
+    loadCustomAgentsMock.mockReturnValue(new Map([
+      ['custom', { name: 'custom', prompt: 'agent prompt' }],
+    ]));
+
+    await runAgent('custom', 'task', {
+      cwd: '/repo',
+      providerOptions: {
+        claude: {
+          sandbox: {
+            allowUnsandboxedCommands: false,
+          },
+        },
+      },
+    });
+
+    expect(providerCallMock).toHaveBeenLastCalledWith(
+      'task',
+      expect.objectContaining({
+        providerOptions: {
+          claude: {
+            effort: 'high',
+            sandbox: {
+              allowUnsandboxedCommands: false,
+              excludedCommands: ['rm'],
+            },
+          },
+        },
+      }),
+    );
+  });
+
+  it('should keep env-origin config leaf ahead of persona and explicit providerOptions in custom agent runAgent calls', async () => {
+    resolveConfigValueMock.mockReturnValue({
+      custom: {
+        providerOptions: {
+          codex: {
+            reasoningEffort: 'high',
+            networkAccess: true,
+          },
+        },
+      },
+    });
+    loadProjectConfigMock.mockReturnValue({
+      provider: 'codex',
+      personaProviders: {
+        custom: {
+          providerOptions: {
+            codex: {
+              reasoningEffort: 'high',
+              networkAccess: true,
+            },
+          },
+        },
+      },
+    });
+    resolveProviderOptionsWithTraceMock.mockReturnValue({
+      value: {
+        codex: {
+          reasoningEffort: 'low',
+          networkAccess: true,
+        },
+      },
+      source: 'project',
+      originResolver: (path: string) => (
+        path === 'codex.reasoningEffort' ? 'env' : 'local'
+      ),
+    });
+    loadCustomAgentsMock.mockReturnValue(new Map([
+      ['custom', { name: 'custom', prompt: 'agent prompt' }],
+    ]));
+
+    await runAgent('custom', 'task', {
+      cwd: '/repo',
+      providerOptions: {
+        codex: {
+          reasoningEffort: 'medium',
+          networkAccess: false,
+        },
+      },
+    });
+
+    expect(providerCallMock).toHaveBeenLastCalledWith(
+      'task',
+      expect.objectContaining({
+        providerOptions: {
+          codex: {
+            reasoningEffort: 'low',
+            networkAccess: false,
+          },
+        },
+      }),
     );
   });
 

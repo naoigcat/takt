@@ -54,16 +54,22 @@ language: en        # UI language: en | ja
 # Interactive mode
 # interactive_preview_steps: 3 # Number of step previews in interactive mode (0-10)
 
-# Per-persona provider/model overrides
+# Per-persona provider/model/provider_options overrides
 # persona_providers:
 #   coder:
 #     provider: claude
 #     model: opus
+#     provider_options:
+#       claude:
+#         effort: high
 #   reviewer:
 #     provider: codex
 #     model: gpt-5.2-codex
+#     provider_options:
+#       codex:
+#         reasoning_effort: high
 
-# Provider-specific options (lowest priority, overridden by workflow/step)
+# Provider-specific options (config defaults; env-resolved leaf overrides win, otherwise step > workflow > persona > project > global)
 # provider_options:
 #   codex:
 #     network_access: true

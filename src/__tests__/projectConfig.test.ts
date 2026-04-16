@@ -238,6 +238,32 @@ unexpected_overrides:
       expect(() => loadProjectConfig(testDir)).toThrow(/reasoning_effort/);
     });
 
+    it('should reject empty persona_providers provider_options during load', () => {
+      const configPath = join(testDir, '.takt', 'config.yaml');
+      const configContent = [
+        'persona_providers:',
+        '  reviewer:',
+        '    provider_options: {}',
+      ].join('\n');
+      writeFileSync(configPath, configContent, 'utf-8');
+
+      expect(() => loadProjectConfig(testDir)).toThrow(/provider_options.*at least one provider-specific option/i);
+    });
+
+    it('should fail fast when saving empty personaProviders providerOptions', () => {
+      const config: ProjectLocalConfig = {
+        personaProviders: {
+          reviewer: {
+            providerOptions: {},
+          },
+        },
+      };
+
+      expect(() => saveProjectConfig(testDir, config)).toThrow(
+        /persona_providers\.reviewer\.provider_options must include at least one provider-specific option/i,
+      );
+    });
+
     it('should fail fast when claude effort is outside SDK enum', () => {
       const configPath = join(testDir, '.takt', 'config.yaml');
       const configContent = [
@@ -281,6 +307,33 @@ unexpected_overrides:
       expect(loaded.concurrency).toBe(3);
       expect(loaded.taskPollIntervalMs).toBe(1200);
       expect(loaded.interactivePreviewSteps).toBe(2);
+    });
+
+    it('should load persona_providers provider_options from project config yaml', () => {
+      const configPath = join(testDir, '.takt', 'config.yaml');
+      const configContent = [
+        'persona_providers:',
+        '  reviewer:',
+        '    provider_options:',
+        '      claude:',
+        '        allowed_tools:',
+        '          - Read',
+        '          - Edit',
+        '      codex:',
+        '        reasoning_effort: high',
+      ].join('\n');
+      writeFileSync(configPath, configContent, 'utf-8');
+
+      const loaded = loadProjectConfig(testDir);
+
+      expect(loaded.personaProviders).toEqual({
+        reviewer: {
+          providerOptions: {
+            claude: { allowedTools: ['Read', 'Edit'] },
+            codex: { reasoningEffort: 'high' },
+          },
+        },
+      });
     });
 
     it('should accept interactive_preview_steps in project config yaml', () => {
@@ -396,6 +449,40 @@ unexpected_overrides:
       expect(raw).toContain('concurrency: 4');
       expect(raw).toContain('task_poll_interval_ms: 1500');
       expect(raw).toContain('interactive_preview_steps: 1');
+    });
+
+    it('should save personaProviders providerOptions as snake_case keys', () => {
+      const config = {
+        personaProviders: {
+          reviewer: {
+            providerOptions: {
+              claude: {
+                allowedTools: ['Read', 'Edit'],
+                sandbox: {
+                  allowUnsandboxedCommands: true,
+                  excludedCommands: ['./gradlew'],
+                },
+              },
+              codex: { reasoningEffort: 'high' },
+              copilot: { effort: 'high' },
+            },
+          },
+        },
+      } as ProjectLocalConfig;
+
+      saveProjectConfig(testDir, config);
+
+      const raw = readFileSync(join(testDir, '.takt', 'config.yaml'), 'utf-8');
+      expect(raw).toContain('persona_providers:');
+      expect(raw).toContain('provider_options:');
+      expect(raw).toContain('allowed_tools:');
+      expect(raw).toContain('allow_unsandboxed_commands: true');
+      expect(raw).toContain('excluded_commands:');
+      expect(raw).toContain('reasoning_effort: high');
+      expect(raw).toContain('copilot:');
+      expect(raw).toContain('effort: high');
+      expect(raw).not.toContain('providerOptions:');
+      expect(raw).not.toContain('allowedTools:');
     });
 
     it('should save interactive preview count with canonical step key', () => {

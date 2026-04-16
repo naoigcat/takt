@@ -54,16 +54,22 @@ language: ja         # 表示言語: ja | en
 # インタラクティブモード
 # interactive_preview_steps: 3 # インタラクティブモードでの step プレビュー数 (0-10)
 
-# ペルソナ別プロバイダー・モデル指定
+# ペルソナ別プロバイダー・モデル・provider_options 指定
 # persona_providers:
 #   coder:
 #     provider: claude
 #     model: opus
+#     provider_options:
+#       claude:
+#         effort: high
 #   reviewer:
 #     provider: codex
 #     model: gpt-5.2-codex
+#     provider_options:
+#       codex:
+#         reasoning_effort: high
 
-# プロバイダー固有オプション（最低優先度、workflow/step で上書き可能）
+# プロバイダー固有オプション（設定既定値。env 起源の leaf が最優先で、それ以外は step > workflow > persona > project > global の順）
 # provider_options:
 #   codex:
 #     network_access: true

@@ -149,6 +149,109 @@ describe('loadGlobalConfig', () => {
     expect(raw).toContain('allow_git_filters: true');
   });
 
+  it('should load persona_providers provider_options from global config', () => {
+    const taktDir = join(testHomeDir, '.takt');
+    mkdirSync(taktDir, { recursive: true });
+    writeFileSync(
+      getGlobalConfigPath(),
+      [
+        'language: en',
+        'persona_providers:',
+        '  reviewer:',
+        '    provider_options:',
+        '      claude:',
+        '        allowed_tools:',
+        '          - Read',
+        '          - Edit',
+        '      codex:',
+        '        reasoning_effort: high',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    const config = loadGlobalConfig();
+
+    expect(config.personaProviders).toEqual({
+      reviewer: {
+        providerOptions: {
+          claude: { allowedTools: ['Read', 'Edit'] },
+          codex: { reasoningEffort: 'high' },
+        },
+      },
+    });
+  });
+
+  it('should save personaProviders providerOptions as snake_case keys in global config', () => {
+    const taktDir = join(testHomeDir, '.takt');
+    mkdirSync(taktDir, { recursive: true });
+    writeFileSync(getGlobalConfigPath(), 'language: en\n', 'utf-8');
+
+    const config = loadGlobalConfig();
+    config.personaProviders = {
+      reviewer: {
+        providerOptions: {
+          claude: {
+            allowedTools: ['Read', 'Edit'],
+            sandbox: {
+              allowUnsandboxedCommands: true,
+              excludedCommands: ['./gradlew'],
+            },
+          },
+          codex: { reasoningEffort: 'high' },
+          copilot: { effort: 'high' },
+        },
+      },
+    };
+    saveGlobalConfig(config);
+
+    const raw = readFileSync(getGlobalConfigPath(), 'utf-8');
+    expect(raw).toContain('persona_providers:');
+    expect(raw).toContain('provider_options:');
+    expect(raw).toContain('allowed_tools:');
+    expect(raw).toContain('allow_unsandboxed_commands: true');
+    expect(raw).toContain('excluded_commands:');
+    expect(raw).toContain('reasoning_effort: high');
+    expect(raw).toContain('copilot:');
+    expect(raw).toContain('effort: high');
+    expect(raw).not.toContain('providerOptions:');
+    expect(raw).not.toContain('allowedTools:');
+  });
+
+  it('should reject empty nested persona_providers provider_options during load', () => {
+    const taktDir = join(testHomeDir, '.takt');
+    mkdirSync(taktDir, { recursive: true });
+    writeFileSync(
+      getGlobalConfigPath(),
+      [
+        'language: en',
+        'persona_providers:',
+        '  reviewer:',
+        '    provider_options:',
+        '      claude: {}',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    expect(() => loadGlobalConfig()).toThrow(/provider_options.*at least one provider-specific option/i);
+  });
+
+  it('should fail fast when saving empty personaProviders providerOptions in global config', () => {
+    const taktDir = join(testHomeDir, '.takt');
+    mkdirSync(taktDir, { recursive: true });
+    writeFileSync(getGlobalConfigPath(), 'language: en\n', 'utf-8');
+
+    const config = loadGlobalConfig();
+    config.personaProviders = {
+      reviewer: {
+        providerOptions: {},
+      },
+    };
+
+    expect(() => saveGlobalConfig(config)).toThrow(
+      /persona_providers\.reviewer\.provider_options must include at least one provider-specific option/i,
+    );
+  });
+
   it('should persist takt_providers.assistant when saving global config', () => {
     const taktDir = join(testHomeDir, '.takt');
     mkdirSync(taktDir, { recursive: true });
@@ -306,6 +409,8 @@ describe('loadGlobalConfig', () => {
         '      allow_unsandboxed_commands: true',
         '      excluded_commands:',
         '        - git push',
+        '  copilot:',
+        '    effort: high',
       ].join('\n'),
       'utf-8',
     );
@@ -324,9 +429,12 @@ describe('loadGlobalConfig', () => {
           excludedCommands: ['git push'],
         },
       },
+      copilot: { effort: 'high' },
     });
     const raw = readFileSync(getGlobalConfigPath(), 'utf-8');
     expect(raw).toContain('provider_options:');
+    expect(raw).toContain('copilot:');
+    expect(raw).toContain('effort: high');
   });
 
   it('should round-trip copilot global fields', () => {
