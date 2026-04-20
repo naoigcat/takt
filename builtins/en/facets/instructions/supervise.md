@@ -39,6 +39,8 @@ Verify existing evidence for tests, builds, and functional checks, then perform 
 - When re-evaluating prior findings, compare the unversioned file with the most recent timestamped history file and verify that the meaning of `new / persists / resolved / reopened` is preserved
 - Treat summary reports as summaries, not as primary evidence. Prefer reports that record execution results, reviewer reports with concrete verification details, and then actual code
 - You may treat `Build Results` / `Test Results` sections in reports that record execution results as primary evidence
+- For `architecture-review`, `qa-review`, `testing-review`, `security-review`, and `requirements-review`, prioritize each report's `Verification Evidence` section when checking evidence
+- Treat each `Verification Evidence` item as supporting evidence only when it states the verified target, what was checked, and observed result. If any part is missing, mark that item as `unverified`
 - Treat reviewer claims such as "confirmed success" as supporting evidence only when they state the verified target, what was checked, and the observed result
 - If items of evidence conflict, prioritize them in this order: `execution-result report > reviewer report with concrete verification details > summary report`
 - If a later report reclassifies an earlier finding as `resolved`, `false_positive`, or `overreach`, decide whether to accept that reclassification by checking it against the task, plan, and code
