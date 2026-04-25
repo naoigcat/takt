@@ -298,10 +298,10 @@ The following features are still being tuned. Behavior, schema, and naming may c
 
 ### Changed
 
-- BREAKING: ピース YAML の MCP サーバー設定をデフォルト拒否に変更。使用するには `pieceMcpServers` でトランスポート別に明示的に許可が必要 (#524)
-- BREAKING: ピース YAML の Arpeggio カスタムコード（カスタムデータソース、インライン JS、外部マージファイル）をデフォルト拒否に変更。使用するには `pieceArpeggio` で明示的に許可が必要 (#521)
-- BREAKING: ピース YAML の runtime prepare カスタムスクリプトをデフォルト拒否に変更（ビルトインプリセットは常に許可）。使用するには `pieceRuntimePrepare.customScripts: true` が必要 (#520)
-- BREAKING: sync conflict resolver の自動ツール承認をデフォルト拒否に変更。使用するには `syncConflictResolver.autoApproveTools: true` が必要 (#522)
+- BREAKING: ピース YAML の MCP サーバー設定をデフォルト拒否に変更。使用するには `piece_mcp_servers` でトランスポート別に明示的に許可が必要 (#524)
+- BREAKING: ピース YAML の Arpeggio カスタムコード（カスタムデータソース、インライン JS、外部マージファイル）をデフォルト拒否に変更。使用するには `piece_arpeggio` で明示的に許可が必要 (#521)
+- BREAKING: ピース YAML の runtime prepare カスタムスクリプトをデフォルト拒否に変更（ビルトインプリセットは常に許可）。使用するには `piece_runtime_prepare.custom_scripts: true` が必要 (#520)
+- BREAKING: sync conflict resolver の自動ツール承認をデフォルト拒否に変更。使用するには `sync_conflict_resolver.auto_approve_tools: true` が必要 (#522)
 - team leader のタスク分解における最大ターン数を 4 → 5 に引き上げ (#511)
 - supervisor ファセットを強化: 要件カバレッジのエビデンスベース検証を追加
 - ペルソナファセットからクロスエージェント参照を除去し、ピース横断での再利用性を向上
