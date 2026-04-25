@@ -6,6 +6,43 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.38.0] - 2026-04-25
+
+### Added
+
+- `auto-improvement-loop` ビルトイン workflow を追加 (#653)。リポジトリを定期スキャンし、優先度（PR -> Issue -> fresh improvement -> wait -> route）でタスクを振り分ける無限ループのオーケストレーション workflow。同時に基盤機能を追加: `max_steps: infinite`（step 上限なし、`exceeded` にならない）、`pr_list` system input（`author` / `base_branch` / `head_branch` / `draft` で絞り込み可能な open PR 一覧）、`task_queue_context.items`（キュー内容を `when:` から参照可能）、`when:` の配列参照と `exists(list, item.field == "X")` 関数（初期スコープは `==` と `&&` のみ）、`followup-task` ビルトイン構造化出力 schema（`enqueue_new_task` / `comment_on_pr` / `enqueue_from_pr` / `prepare_merge` / `noop` の action）
+- `issue_list` / `issue_selection` system input を追加 (#662)。orchestration workflow から current task の Issue だけでなく、リポジトリ全体の open Issue を観測できるようになった。`auto-improvement-loop` で「PR なし + open Issue あり」の場合に Issue 分岐へ進めるよう dead branch を解消
+- `persona_providers.<persona>.provider_options` をサポート (#623)。persona ごとに `provider` / `model` と並んで `provider_options`（`claude.effort`、`codex.reasoning_effort` 等）を設定可能になり、各 step に同じ provider option を重複記述する必要がなくなった。優先順位: step > workflow > persona > project > global > default
+- インストラクションテンプレート変数に report handle (`{current_report}` / `{previous_report}` / `{report_history}` / `{peer_reports}`) を追加 (#627)。reviewer / fix / supervise 系 step で、自ステップ最新／直前レポートや peer ステップ最新レポート群を、ファセットに具体的なファイル名を直書きせず抽象的に参照できる
+- レビュー系 output contract に検証証跡セクションを標準化 (#628)。`architecture-review`、`qa-review`、`testing-review`、`security-review`、`requirements-review` でビルド / テスト / 動作確認の確認対象・確認内容・結果（または「未確認」の明示）を共通フォーマットで記録するようになり、Supervisor 側で証跡判定が安定する
+- `default-high` workflow を追加。team-leader 実装＋5並列レビュー＋仲裁付き AI アンチパターンレビュー＋監督を組み合わせたフルスペック汎用 workflow（`plan -> write_tests -> team-leader implement -> AI review -> 5並列 review -> fix -> supervise -> complete`）。Quick Start カテゴリも `default` / `default-high` / `frontend` / `backend` / `dual` に再構成
+- `takt-default-refresh-all` / `takt-default-refresh-fast` workflow を追加。TAKT 開発 workflow の `session: refresh` 比較版で、`refresh-all` は全 step を refresh、`refresh-fast` は文脈肥大しやすい step（`write_tests`、`ai_review`、各 reviewer、`fix`）にのみ refresh を入れる
+- `takt watch --ignore-exceed` オプションを追加 (#651)。`takt run --ignore-exceed` と同じ意味で、workflow の `max_steps` 超過を無視して継続実行し `exceeded` 扱いにしない
+- `provider_options.*.effort` の値と解決ソースを console / NDJSON に表示 (#647)。active な provider の effort（`claude.effort` / `codex.reasoningEffort` / `copilot.effort`）が console の `Provider:` / `Model:` と並んで表示され、debug / verbose 時には `(source: step|persona|global|...)` も表示される。NDJSON `step_start` には全追跡パスの `providerOptions` / `providerOptionsSources` が常時記録される
+- Issue を紐づけずに作成された task ベース PR の `## Summary` で `order.md` 全文を本文として使うように変更 (#600)。従来は空セクションだったが、PR 上で「何をやる task だったのか」を直接読めるようになった
+
+### Changed
+
+- `<!-- takt:managed -->` hidden marker をデフォルト付与から opt-in に変更 (#665)。通常の `--auto-pr` / `autoPr` で作成される PR には marker が付かなくなり、`auto-improvement-loop` などの orchestration 由来 task のみが marker を付与する。通常の pipeline / task 実行で作られる PR は人手作成 PR と区別がつかなくなる
+- workflow の `source` / `trust` 解決を loader 入口で一本化 (#660)。parser / normalizer / doctor / `workflow_call` の子ロード経路がいずれも loader が確定した `WorkflowTrustInfo` を使うようになり、後段の path-based fallback で再分類されなくなった。`auto-improvement-loop` のようなビルトインの privileged workflow が discovery / runtime / doctor で一貫して builtin として扱われる
+- インタラクティブモードで `--pr` のソースコンテキストを会話履歴から分離 (#656)。`--pr` で取得した PR レビューコメントは hidden な User 発話として `history` に積まず、独立した「Source Context」枠で保持する。`/go` 要約時に PR コメント全文をユーザー要求として誤解して指示書が肥大することを防ぐ
+- `takt-default` の `implement` step（team leader / part worker）に親 `takt run` の PID を protected PID として注入し、短い process-safety policy を適用 (#603)。AI が cleanup 判断時に `pkill` / `killall` / 名前ベース kill で親 run を巻き込む事故を防ぐ
+- Retry / re-execution の開始前に、既存 worktree の project-local `.takt/` を root の最新状態で同期するように変更 (#607)。root 側の facet / workflow / output-contract 修正が retry でも反映されるようになり、初回実行と retry の挙動が揃う
+- PR 同期系 system effect（`sync_with_root`、`resolve_conflicts_with_ai`）を PR スコープ実行に整理 (#661)。専用の一時 worktree / checkout で PR branch を直接対象化するため orchestration step の `cwd` に依存せず、`auto-improvement-loop` の `prepare_merge` が orchestration の実行場所に関わらず deterministic に成功する
+
+### Fixed
+
+- `team_leader + output_contracts.report` の step で、root session 不在を理由に report phase が abort する問題を修正 (#655)。`runReportPhase()` が team leader の集約 `lastResponse` を fallback として受け付けるようになり、root session も `lastResponse` も無い場合のみ失敗する
+- takt 自身のリポジトリで discovery 経由のロード時、ビルトイン workflow の `source` / `trust` 情報が path-based に project workflow へ再分類されてしまう問題を修正 (#659)。`auto-improvement-loop` を含む privileged ビルトイン workflow が discovery 経路でも builtin として正しく扱われる（恒久対応は #660）
+- `provider_options.copilot.effort` の設定保存ラウンドトリップが落ちていた問題を修正 (#626)。`denormalizeProviderOptions()` が `copilot.effort` を raw 形式へ書き戻すようになり、設定保存経路で値が消えなくなる
+- managed PR の判定で `takt-managed` GitHub label への依存を撤去。hidden marker `<!-- takt:managed -->` を managed PR の唯一の識別子に統一
+
+### Internal
+
+- SDK 依存を更新: `@anthropic-ai/claude-agent-sdk` ^0.2.71 -> ^0.2.119、`@openai/codex-sdk` ^0.114.0 -> ^0.125.0（バンドル `@openai/codex` バイナリも 0.114.0 -> 0.125.0）、`@opencode-ai/sdk` >=1.2.10 <1.3.0 -> ^1.14.24（v2 export は維持）
+- `claude` provider で `provider_options.allowed_tools` が `claude --allowed-tools` に伝搬し、`Bash(python3 -m pytest:*)` が approval なしで通ることを実 claude provider で検証する E2E テストを追加
+- レビュー系 workflow で行数閾値をテスト失敗扱いしないようガイダンスを更新
+
 ## [0.37.0] - 2026-04-20
 
 ### Added

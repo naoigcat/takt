@@ -159,7 +159,12 @@ Monitor `.takt/tasks.yaml` and auto-execute tasks as a resident process.
 ```bash
 # Monitor .takt/tasks.yaml and auto-execute tasks (resident process)
 takt watch
+
+# Ignore workflow max_steps and continue running tasks instead of marking them exceeded
+takt watch --ignore-exceed
 ```
+
+`takt watch --ignore-exceed` has the same semantics as `takt run --ignore-exceed`: it ignores the workflow `max_steps` iteration limit and does not write `exceeded` retry metadata to `.takt/tasks.yaml`.
 
 ### takt list
 

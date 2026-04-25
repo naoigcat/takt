@@ -159,7 +159,12 @@ takt run --ignore-exceed
 ```bash
 # .takt/tasks.yaml を監視してタスクを自動実行（常駐プロセス）
 takt watch
+
+# workflow の max_steps を無視して、exceeded 扱いにせず継続実行する
+takt watch --ignore-exceed
 ```
+
+`takt watch --ignore-exceed` の意味は `takt run --ignore-exceed` と同じです。workflow の `max_steps` を無視し、`.takt/tasks.yaml` に exceeded 用の再実行メタデータを書きません。
 
 ### takt list
 

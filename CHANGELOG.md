@@ -6,6 +6,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.38.0] - 2026-04-25
+
+### Added
+
+- `auto-improvement-loop` builtin workflow added (#653). An infinite-loop orchestration workflow that scans the repository on a schedule and routes work by priority (PR -> Issue -> fresh improvement -> wait -> route). Supporting infrastructure introduced together: `max_steps: infinite` (no step cap, no `exceeded` status), `pr_list` system input (open PRs filtered by `author` / `base_branch` / `head_branch` / `draft`), `task_queue_context.items` (queue contents observable from `when:`), `when:` array references with `exists(list, item.field == "X")` function (initial scope: `==` and `&&` only), and `followup-task` builtin structured-output schema with `enqueue_new_task` / `comment_on_pr` / `enqueue_from_pr` / `prepare_merge` / `noop` actions
+- `issue_list` / `issue_selection` system inputs added (#662). Orchestration workflows can now observe repo-wide open Issues, not just the current task's Issue. Resolves the dead Issue branch in `auto-improvement-loop` where PRs absent + open Issues present should route to the Issue planner
+- `persona_providers.<persona>.provider_options` added (#623). Persona-level `provider_options` (e.g. `claude.effort`, `codex.reasoning_effort`) can now be configured alongside `provider` / `model`, removing the need to repeat the same options across every step. Resolution priority: step > workflow > persona > project > global > default
+- Report handles `{current_report}` / `{previous_report}` / `{report_history}` / `{peer_reports}` added to instruction template variables (#627). Facets can now reference self/peer report files abstractly without hardcoding filenames; usable in `reviewer` / `fix` / `supervise` style steps
+- Standardized verification evidence section added to review output contracts (#628). `architecture-review`, `qa-review`, `testing-review`, `security-review`, `requirements-review` now emit a common build / test / behavior-check section with target, content, and result (or explicit "not verified") so supervisors can evaluate evidence consistently
+- `default-high` workflow added: full-spec general-purpose workflow combining team-leader implementation, 5-parallel review, AI antipattern review with arbitration, and supervision (`plan -> write_tests -> team-leader implement -> AI review -> 5-parallel review -> fix -> supervise -> complete`). Quick Start categories reorganized into `default` / `default-high` / `frontend` / `backend` / `dual`
+- `takt-default-refresh-all` / `takt-default-refresh-fast` workflows added: `session: refresh` variants of the TAKT development workflow. `refresh-all` refreshes every step for full conversation-carry-over comparison; `refresh-fast` refreshes only context-heavy steps (`write_tests`, `ai_review`, reviewers, `fix`)
+- `takt watch --ignore-exceed` option added (#651). Same semantics as `takt run --ignore-exceed`: ignores workflow `max_steps` and continues running tasks instead of marking them `exceeded`
+- `provider_options.*.effort` value and source surfaced in console / NDJSON (#647). Active provider's effort (`claude.effort`, `codex.reasoningEffort`, `copilot.effort`) is shown alongside `Provider:` / `Model:` in console output, with `(source: step|persona|global|...)` suffix in debug / verbose mode. NDJSON `step_start` records always include `providerOptions` and `providerOptionsSources` for the full tracked path set
+- Task-based PRs without an Issue now use `order.md` content for the `## Summary` section of the PR body (#600). Previously the section was empty; now reviewers can read the full task instructions directly from the PR
+
+### Changed
+
+- `<!-- takt:managed -->` hidden marker is now opt-in, not a default (#665). Normal `--auto-pr` / `autoPr` no longer attaches the marker; only orchestration-driven task creation (e.g. `enqueue_task` from `auto-improvement-loop`) adds it. PRs created by ordinary pipeline / task execution are now indistinguishable from human-authored PRs
+- Workflow `source` / `trust` resolution unified at the loader entry (#660). Parser / normalizer / doctor / `workflow_call` child loads now consume the `WorkflowTrustInfo` produced by the loader instead of re-classifying workflows by file path. Builtin privileged workflows (e.g. `auto-improvement-loop` with `kind: system` steps) are now treated consistently across discovery / runtime / doctor entrypoints
+- Interactive mode `--pr` source context separated from conversation history (#656). PR review comments fetched by `--pr` are no longer pushed into `history` as a hidden user message; they are kept as a separate "Source Context" block. `/go` summaries no longer treat the full PR comment thread as the user's request, preventing instruction bloat
+- `takt-default` `implement` step (team leader / part workers) now receives the parent `takt run` PID as a protected PID along with a short process-safety policy (#603). Prevents AI cleanup logic from killing the parent run via `pkill` / `killall` / name-based kill when stray child processes are present
+- Retry / re-execution now syncs the project-local `.takt/` directory from the root repository before re-running on an existing worktree (#607). Root-side facet / workflow / output-contract updates now take effect on retry by default, matching first-run behavior
+- PR sync system effects (`sync_with_root`, `resolve_conflicts_with_ai`) reorganized to operate on PR scope via a dedicated temporary worktree / checkout (#661). Effects no longer depend on the orchestration step's `cwd`, so `prepare_merge` from `auto-improvement-loop` succeeds deterministically regardless of where the orchestration runs
+
+### Fixed
+
+- `team_leader + output_contracts.report` no longer aborts when the root step has no session (#655). `runReportPhase()` now accepts the team leader's aggregated `lastResponse` as a fallback and only fails when both root session and `lastResponse` are absent
+- Builtin workflow `source` / `trust` is preserved during discovery loading inside the takt repo itself (#659). Stop-gap fix that prevented `auto-improvement-loop` and other builtin privileged workflows from being reclassified as project workflows when discovered from the takt repository root (root cause addressed in #660)
+- `provider_options.copilot.effort` round-trip persistence fixed (#626). `denormalizeProviderOptions()` now writes back `copilot.effort` instead of silently dropping it on config save
+- Removed the dependency on the `takt-managed` GitHub label for managed-PR identification. The hidden body marker `<!-- takt:managed -->` is now the single identifier
+
+### Internal
+
+- SDK dependencies bumped: `@anthropic-ai/claude-agent-sdk` ^0.2.71 -> ^0.2.119, `@openai/codex-sdk` ^0.114.0 -> ^0.125.0 (bundled `@openai/codex` binary 0.114.0 -> 0.125.0), `@opencode-ai/sdk` >=1.2.10 <1.3.0 -> ^1.14.24 (v2 export retained)
+- E2E test added for the `claude` provider verifying that `provider_options.allowed_tools` propagates to `claude --allowed-tools` so `Bash(python3 -m pytest:*)` runs without approval prompts in real claude provider runs
+- Test policy updated: line count thresholds are no longer treated as test failures in the review workflow
+
 ## [0.37.0] - 2026-04-20
 
 ### Added
