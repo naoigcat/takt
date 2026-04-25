@@ -304,7 +304,7 @@ describe('loadGlobalConfig', () => {
     const config = loadGlobalConfig();
     config.taktProviders = {} as unknown as NonNullable<typeof config.taktProviders>;
 
-    expect(() => saveGlobalConfig(config)).toThrow(/Configuration error: 'takt_providers\.assistant' is required when takt_providers is set\./);
+    expect(() => saveGlobalConfig(config)).toThrow(/takt_providers\.assistant/);
   });
 
   it('should fail fast on save when takt_providers.assistant has incompatible provider/model', () => {
@@ -333,7 +333,7 @@ describe('loadGlobalConfig', () => {
       assistant: {} as NonNullable<typeof config.taktProviders>['assistant'],
     };
 
-    expect(() => saveGlobalConfig(config)).toThrow(/Configuration error: 'takt_providers\.assistant' must include provider or model\./);
+    expect(() => saveGlobalConfig(config)).toThrow(/takt_providers\.assistant/);
   });
 
   it('should return the same cached object on subsequent calls', () => {

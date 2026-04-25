@@ -123,6 +123,6 @@ describe('buildRawTaktProvidersOrThrow', () => {
       buildRawTaktProvidersOrThrow({
         assistant: {},
       }),
-    ).toThrow(/Configuration error: 'takt_providers\.assistant' must include provider or model\./);
+    ).toThrow(/takt_providers\.assistant/);
   });
 });

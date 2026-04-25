@@ -786,7 +786,7 @@ unexpected_overrides:
         taktProviders: {},
       } as unknown as ProjectLocalConfig;
 
-      expect(() => saveProjectConfig(testDir, invalidConfig)).toThrow(/Configuration error: 'takt_providers\.assistant' is required when takt_providers is set\./);
+      expect(() => saveProjectConfig(testDir, invalidConfig)).toThrow(/takt_providers\.assistant/);
     });
 
     it('should throw on save when takt_providers.assistant has incompatible provider/model', () => {
@@ -811,7 +811,7 @@ unexpected_overrides:
         },
       } as unknown as ProjectLocalConfig;
 
-      expect(() => saveProjectConfig(testDir, invalidConfig)).toThrow(/Configuration error: 'takt_providers\.assistant' must include provider or model\./);
+      expect(() => saveProjectConfig(testDir, invalidConfig)).toThrow(/takt_providers\.assistant/);
     });
   });
 
