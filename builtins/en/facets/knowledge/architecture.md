@@ -7,9 +7,11 @@
 | Criteria | Judgment |
 |----------|----------|
 | Single file > 200 lines | Consider splitting |
-| Single file > 300 lines | REJECT |
+| Single file > 300 lines | Warning. Suggest splitting |
 | Single file with multiple responsibilities | REJECT |
 | Unrelated code coexisting | REJECT |
+
+Line count is a review or doctor warning signal, not a pass/fail condition for unit tests or snapshot tests.
 
 **Module Structure:**
 

@@ -14,10 +14,12 @@ Required splits:
 | Criteria | Judgment |
 |----------|----------|
 | Component over 200 lines | Consider splitting |
-| Component over 300 lines | REJECT |
+| Component over 300 lines | Warning. Suggest splitting |
 | Display and logic mixed | Consider separation |
 | Props drilling (3+ levels) | Consider state management |
 | Component with multiple responsibilities | REJECT |
+
+Component line count is a review signal, not a unit-test or snapshot-test failure condition.
 
 Good Component:
 - Single responsibility: Does one thing well
