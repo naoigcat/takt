@@ -26,9 +26,9 @@ notification_sound_events:    # Optional per-event toggles
   run_abort: true             # Enabled by default; set false to disable
 concurrency: 1                # Parallel task count for takt run (1-10, default: 1 = sequential)
 task_poll_interval_ms: 500    # Polling interval for new tasks during takt run (100-5000, default: 500)
-interactive_preview_steps: 3      # Step previews in interactive mode (0-10, default: 3)
-# auto_fetch: false            # Fetch remote before cloning (default: false)
-# base_branch: main            # Base branch for clone creation (default: remote default branch)
+interactive_preview_steps: 3  # Step previews in interactive mode (0-10, default: 3)
+# auto_fetch: false           # Fetch remote before cloning (default: false)
+# base_branch: main           # Base branch for clone creation (default: remote default branch)
 
 # Runtime environment defaults (applies to all workflows unless workflow_config.runtime overrides)
 # runtime:
@@ -84,28 +84,28 @@ interactive_preview_steps: 3      # Step previews in interactive mode (0-10, def
 
 # Interactive assistant provider (optional)
 # Route the interactive planning conversation to a separate provider/model
-# taktProviders:
+# takt_providers:
 #   assistant:
 #     provider: claude
 #     model: opus
 
 # Workflow security policies (all default to deny)
 # These settings control what untrusted workflow YAMLs are allowed to do.
-# workflowMcpServers:                    # MCP server transport policy
+# workflow_mcp_servers:                  # MCP server transport policy
 #   stdio: true                          # Allow stdio transport (default: false)
 #   sse: false                           # Allow SSE transport (default: false)
 #   http: false                          # Allow HTTP transport (default: false)
-# workflowArpeggio:                      # Arpeggio custom code policy
-#   customDataSourceModules: false       # Allow custom data source modules (default: false)
-#   customMergeInlineJs: false           # Allow inline JS merge functions (default: false)
-#   customMergeFiles: false              # Allow external merge files (default: false)
-# workflowRuntimePrepare:                # Runtime prepare policy
-#   customScripts: false                 # Allow custom scripts (default: false; builtin presets always allowed)
-# syncConflictResolver:                  # Sync conflict resolver policy
-#   autoApproveTools: false              # Allow auto-approval of tools (default: false)
+# workflow_arpeggio:                     # Arpeggio custom code policy
+#   custom_data_source_modules: false    # Allow custom data source modules (default: false)
+#   custom_merge_inline_js: false        # Allow inline JS merge functions (default: false)
+#   custom_merge_files: false            # Allow external merge files (default: false)
+# workflow_runtime_prepare:              # Runtime prepare policy
+#   custom_scripts: false                # Allow custom scripts (default: false; builtin presets always allowed)
+# sync_conflict_resolver:                # Sync conflict resolver policy
+#   auto_approve_tools: false            # Allow auto-approval of tools (default: false)
 
 # Builtin workflow filtering (optional; config keys retain workflow_* names)
-# enable_builtin_workflows: true           # Set false to disable all builtin workflows
+# enable_builtin_workflows: true         # Set false to disable all builtin workflows
 # disabled_builtins: [magi]              # Disable specific builtin workflows by name
 
 # Pipeline execution configuration (optional)
@@ -160,11 +160,11 @@ interactive_preview_steps: 3      # Step previews in interactive mode (0-10, def
 | `base_branch` | string | - | Base branch for clone creation (defaults to remote default branch) |
 | `workflow_categories_file` | string | - | Path to categories file (see [Workflow categories](#workflow-categories); default overlay path uses `workflow-categories.yaml`) |
 | `vcs_provider` | `"github"` \| `"gitlab"` | auto-detect | VCS provider (auto-detected from git remote URL) |
-| `taktProviders` | object | - | TAKT internal provider overrides (e.g., `assistant: { provider: claude, model: opus }`) |
-| `workflowMcpServers` | object | all `false` | MCP server transport policy (`stdio`, `sse`, `http` toggles) |
-| `workflowArpeggio` | object | all `false` | Arpeggio custom code policy (`customDataSourceModules`, `customMergeInlineJs`, `customMergeFiles`) |
-| `workflowRuntimePrepare` | object | `{ customScripts: false }` | Runtime prepare policy (builtin presets always allowed) |
-| `syncConflictResolver` | object | `{ autoApproveTools: false }` | Sync conflict resolver policy |
+| `takt_providers` | object | - | TAKT internal provider overrides (e.g., `assistant: { provider: claude, model: opus }`) |
+| `workflow_mcp_servers` | object | all `false` | MCP server transport policy (`stdio`, `sse`, `http` toggles) |
+| `workflow_arpeggio` | object | all `false` | Arpeggio custom code policy (`custom_data_source_modules`, `custom_merge_inline_js`, `custom_merge_files`) |
+| `workflow_runtime_prepare` | object | `{ custom_scripts: false }` | Runtime prepare policy (builtin presets always allowed) |
+| `sync_conflict_resolver` | object | `{ auto_approve_tools: false }` | Sync conflict resolver policy |
 
 ## Project Configuration
 
@@ -207,11 +207,11 @@ concurrency: 2                # Parallel task count for takt run in this project
 | `provider_options` | object | - | Provider-specific options |
 | `provider_profiles` | object | - | Provider-specific permission profiles |
 | `vcs_provider` | `"github"` \| `"gitlab"` | auto-detect | VCS provider (overrides global) |
-| `taktProviders` | object | - | TAKT internal provider overrides (e.g., `assistant: { provider: claude, model: opus }`) |
-| `workflowMcpServers` | object | - | MCP server transport policy (overrides global) |
-| `workflowArpeggio` | object | - | Arpeggio custom code policy (overrides global) |
-| `workflowRuntimePrepare` | object | - | Runtime prepare policy (overrides global) |
-| `syncConflictResolver` | object | - | Sync conflict resolver policy (overrides global) |
+| `takt_providers` | object | - | TAKT internal provider overrides (e.g., `assistant: { provider: claude, model: opus }`) |
+| `workflow_mcp_servers` | object | - | MCP server transport policy (overrides global) |
+| `workflow_arpeggio` | object | - | Arpeggio custom code policy (overrides global) |
+| `workflow_runtime_prepare` | object | - | Runtime prepare policy (overrides global) |
+| `sync_conflict_resolver` | object | - | Sync conflict resolver policy (overrides global) |
 
 Project config values override global config when both are set.
 
