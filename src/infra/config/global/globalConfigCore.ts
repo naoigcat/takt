@@ -11,10 +11,12 @@ import {
   normalizeWorkflowOverrides,
   normalizePipelineConfig,
   normalizePersonaProviders,
-  normalizeTaktProviders,
-  buildRawTaktProvidersOrThrow,
   normalizeRuntime,
 } from '../configNormalizers.js';
+import {
+  normalizeTaktProviders,
+  buildRawTaktProvidersOrThrow,
+} from '../taktProviderNormalizers.js';
 import {
   resolveAliasedPreviewCount,
 } from '../configKeyAliases.js';

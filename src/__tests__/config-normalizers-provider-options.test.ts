@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildRawTaktProvidersOrThrow,
   denormalizeProviderOptions,
 } from '../infra/config/configNormalizers.js';
 import { normalizeProviderOptions } from '../infra/config/providerOptions.js';
+import { buildRawTaktProvidersOrThrow } from '../infra/config/taktProviderNormalizers.js';
 
 describe('denormalizeProviderOptions', () => {
   it('should convert camelCase provider options into persisted snake_case format', () => {

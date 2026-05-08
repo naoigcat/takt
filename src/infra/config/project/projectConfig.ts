@@ -14,12 +14,14 @@ import {
   denormalizeProviderOptions,
   denormalizePersonaProviders,
   normalizePersonaProviders,
-  normalizeTaktProviders,
-  buildRawTaktProvidersOrThrow,
   normalizeWorkflowOverrides,
   denormalizeWorkflowOverrides,
   normalizeRuntime,
 } from '../configNormalizers.js';
+import {
+  normalizeTaktProviders,
+  buildRawTaktProvidersOrThrow,
+} from '../taktProviderNormalizers.js';
 import {
   resolveAliasedPreviewCount,
 } from '../configKeyAliases.js';
