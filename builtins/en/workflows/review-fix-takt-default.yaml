@@ -10,15 +10,15 @@ max_steps: 50
 initial_step: gather
 loop_monitors:
   - cycle:
-      - ai_review
-      - ai_fix
+      - ai-antipattern-review-1st
+      - ai-antipattern-fix
     threshold: 5
     judge:
       persona: supervisor
-      instruction: loop-monitor-ai-fix
+      instruction: loop-monitor-ai-antipattern-fix
       rules:
         - condition: Healthy (making progress)
-          next: ai_review
+          next: ai-antipattern-review-1st
         - condition: Unproductive (no improvement)
           next: reviewers
   - cycle:
@@ -163,7 +163,7 @@ steps:
           - condition: approved
           - condition: needs_fix
 
-      - name: ai-antipattern-review
+      - name: ai-antipattern-review-2nd
         edit: false
         persona: ai-antipattern-reviewer
         policy:
@@ -178,11 +178,11 @@ steps:
               - Bash
               - WebSearch
               - WebFetch
-        instruction: ai-review
+        instruction: ai-antipattern-review
         output_contracts:
           report:
-            - name: ai-review.md
-              format: ai-review
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
         rules:
           - condition: approved
           - condition: needs_fix
@@ -240,11 +240,11 @@ steps:
     instruction: fix
     rules:
       - condition: Fix complete
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: Cannot proceed, insufficient info
         next: ABORT
 
-  - name: ai_review
+  - name: ai-antipattern-review-1st
     edit: false
     persona: ai-antipattern-reviewer
     policy:
@@ -262,13 +262,13 @@ steps:
       - condition: No AI-specific issues
         next: reviewers
       - condition: AI-specific issues found
-        next: ai_fix
-    instruction: ai-review
+        next: ai-antipattern-fix
+    instruction: ai-antipattern-review
     output_contracts:
       report:
-        - name: ai-review.md
-          format: ai-review
-  - name: ai_fix
+        - name: ai-antipattern-review.md
+          format: ai-antipattern-review
+  - name: ai-antipattern-fix
     edit: true
     persona: coder
     policy:
@@ -292,13 +292,13 @@ steps:
     pass_previous_response: false
     rules:
       - condition: AI issues fixed
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No fix needed (verified target files/spec)
-        next: ai_no_fix
+        next: ai-antipattern-no-fix
       - condition: Cannot proceed, insufficient info
-        next: ai_no_fix
-    instruction: ai-fix
-  - name: ai_no_fix
+        next: ai-antipattern-no-fix
+    instruction: ai-antipattern-fix
+  - name: ai-antipattern-no-fix
     edit: false
     persona: architecture-reviewer
     policy: review
@@ -309,9 +309,9 @@ steps:
           - Glob
           - Grep
     rules:
-      - condition: ai_review's findings are valid (fix required)
-        next: ai_fix
-      - condition: ai_fix's judgment is valid (no fix needed)
+      - condition: ai-antipattern-review-1st's findings are valid (fix required)
+        next: ai-antipattern-fix
+      - condition: ai-antipattern-fix's judgment is valid (no fix needed)
         next: reviewers
     instruction: arbitrate
   - name: supervise

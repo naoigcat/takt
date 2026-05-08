@@ -1,10 +1,10 @@
-ai_review と ai_fix のループが {cycle_count} 回繰り返されました。
+ai-antipattern-review-1st と ai-antipattern-fix のループが {cycle_count} 回繰り返されました。
 
 各サイクルのレポートを確認し、このループが健全（進捗がある）か、
 非生産的（同じ問題を繰り返している）かを判断してください。
 
 **参照するレポート:**
-- AIレビュー結果: {report:ai-review.md}
+- AIレビュー結果: {report:ai-antipattern-review.md}
 
 **判断基準:**
 - 同一 finding_id が複数サイクルにわたって persists しているか

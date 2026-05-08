@@ -97,7 +97,7 @@ steps:
           report:
             - name: terraform-review.md
               format: terraform-review
-      - name: ai_review
+      - name: ai-antipattern-review-2nd
         edit: false
         persona: ai-antipattern-reviewer
         policy:
@@ -111,14 +111,14 @@ steps:
               - Grep
               - WebSearch
               - WebFetch
-        instruction: review-ai
+        instruction: ai-antipattern-review
         rules:
           - condition: No AI-specific issues
           - condition: AI-specific issues found
         output_contracts:
           report:
-            - name: ai-review.md
-              format: ai-review
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
     rules:
       - condition: all("Complies with Terraform conventions", "No AI-specific issues")
         next: supervise
@@ -143,7 +143,7 @@ steps:
       - condition: All reviewers approved and task requirements met
         next: COMPLETE
       - condition: Only AI-specific issues need fixing
-        next: ai_fix
+        next: ai-antipattern-fix
       - condition: Only convention violations or requirements unmet
         next: supervise_fix
       - condition: Multiple types of issues found
@@ -159,7 +159,7 @@ steps:
           use_judge: false
   - name: fix_both
     parallel:
-      - name: ai_fix_parallel
+      - name: ai-antipattern-fix-parallel
         edit: true
         persona: terraform-coder
         policy:
@@ -179,7 +179,7 @@ steps:
           - condition: AI issue fix complete
           - condition: No fix needed (target file/spec verified)
           - condition: Cannot determine, insufficient info
-        instruction: ai-fix
+        instruction: ai-antipattern-fix
       - name: supervise_fix_parallel
         edit: true
         persona: terraform-coder
@@ -205,7 +205,7 @@ steps:
         next: reviewers
       - condition: any("No fix needed (target file/spec verified)", "Cannot determine, insufficient info", "Cannot proceed with fix")
         next: implement
-  - name: ai_fix
+  - name: ai-antipattern-fix
     edit: true
     persona: terraform-coder
     policy:
@@ -230,7 +230,7 @@ steps:
         next: implement
       - condition: Cannot determine, insufficient info
         next: implement
-    instruction: ai-fix
+    instruction: ai-antipattern-fix
   - name: supervise_fix
     edit: true
     persona: terraform-coder
@@ -273,7 +273,7 @@ loop_monitors:
           next: fix_both
         - condition: Unproductive (oscillation or requirement conflict)
           next: ABORT
-  - cycle: [ai_fix, reviewers]
+  - cycle: [ai-antipattern-fix, reviewers]
     threshold: 3
     judge:
       persona: supervisor
@@ -287,7 +287,7 @@ loop_monitors:
         - Reviewer findings conflict with task requirements and cannot be reconciled
       rules:
         - condition: Healthy (new issues trending down)
-          next: ai_fix
+          next: ai-antipattern-fix
         - condition: Unproductive (oscillation or requirement conflict)
           next: ABORT
   - cycle: [supervise_fix, reviewers]

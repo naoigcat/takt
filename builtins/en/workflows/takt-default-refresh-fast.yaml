@@ -10,15 +10,15 @@ max_steps: 50
 initial_step: plan
 loop_monitors:
   - cycle:
-      - ai_review
-      - ai_fix
+      - ai-antipattern-review-1st
+      - ai-antipattern-fix
     threshold: 5
     judge:
       persona: supervisor
-      instruction: loop-monitor-ai-fix
+      instruction: loop-monitor-ai-antipattern-fix
       rules:
         - condition: Healthy (progress observed)
-          next: ai_review
+          next: ai-antipattern-review-1st
         - condition: Unproductive (no improvement)
           next: reviewers
   - cycle:
@@ -143,9 +143,9 @@ steps:
     instruction: team-leader-implement
     rules:
       - condition: Implementation complete
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No implementation needed (report only)
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: Cannot determine, insufficient information
         next: plan
       - condition: User input required
@@ -158,7 +158,7 @@ steps:
           format: coder-scope
         - name: coder-decisions.md
           format: coder-decisions
-  - name: ai_review
+  - name: ai-antipattern-review-1st
     edit: false
     persona: ai-antipattern-reviewer
     session: refresh
@@ -177,13 +177,13 @@ steps:
       - condition: No AI-specific issues
         next: reviewers
       - condition: AI-specific issues found
-        next: ai_fix
-    instruction: ai-review
+        next: ai-antipattern-fix
+    instruction: ai-antipattern-review
     output_contracts:
       report:
-        - name: ai-review.md
-          format: ai-review
-  - name: ai_fix
+        - name: ai-antipattern-review.md
+          format: ai-antipattern-review
+  - name: ai-antipattern-fix
     edit: true
     persona: coder
     policy:
@@ -208,13 +208,13 @@ steps:
     pass_previous_response: false
     rules:
       - condition: AI issues fixed
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No fix needed (target files/spec confirmed)
-        next: ai_no_fix
+        next: ai-antipattern-no-fix
       - condition: Cannot determine, insufficient information
-        next: ai_no_fix
-    instruction: ai-fix
-  - name: ai_no_fix
+        next: ai-antipattern-no-fix
+    instruction: ai-antipattern-fix
+  - name: ai-antipattern-no-fix
     edit: false
     persona: architecture-reviewer
     policy: review
@@ -225,9 +225,9 @@ steps:
           - Glob
           - Grep
     rules:
-      - condition: ai_review finding is valid (should fix)
-        next: ai_fix
-      - condition: ai_fix judgment is valid (no fix needed)
+      - condition: ai-antipattern-review-1st finding is valid (should fix)
+        next: ai-antipattern-fix
+      - condition: ai-antipattern-fix judgment is valid (no fix needed)
         next: reviewers
     instruction: arbitrate
   - name: reviewers
@@ -353,6 +353,28 @@ steps:
           report:
             - name: requirements-review.md
               format: requirements-review
+      - name: ai-antipattern-review-2nd
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        provider_options:
+          claude:
+            allowed_tools:
+              - Read
+              - Glob
+              - Grep
+              - WebSearch
+              - WebFetch
+        instruction: ai-antipattern-review
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
     rules:
       - condition: all(\"approved\")
         next: supervise

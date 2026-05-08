@@ -10,15 +10,15 @@ max_steps: 30
 initial_step: plan
 loop_monitors:
   - cycle:
-      - ai_review
-      - ai_fix
+      - ai-antipattern-review-1st
+      - ai-antipattern-fix
     threshold: 3
     judge:
       persona: supervisor
-      instruction: loop-monitor-ai-fix
+      instruction: loop-monitor-ai-antipattern-fix
       rules:
         - condition: Healthy (making progress)
-          next: ai_review
+          next: ai-antipattern-review-1st
         - condition: Unproductive (no improvement)
           next: reviewers_1
   - cycle:
@@ -129,11 +129,11 @@ steps:
     instruction: implement
     rules:
       - condition: Implementation is complete
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No implementation (report only)
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: Cannot proceed with implementation
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: User input required
         next: implement
         requires_user_input: true
@@ -144,7 +144,7 @@ steps:
           format: coder-scope
         - name: coder-decisions.md
           format: coder-decisions
-  - name: ai_review
+  - name: ai-antipattern-review-1st
     edit: false
     persona: ai-antipattern-reviewer
     policy:
@@ -158,17 +158,17 @@ steps:
           - Grep
           - WebSearch
           - WebFetch
-    instruction: ai-review
+    instruction: ai-antipattern-review
     rules:
       - condition: No AI-specific issues found
         next: reviewers_1
       - condition: AI-specific issues detected
-        next: ai_fix
+        next: ai-antipattern-fix
     output_contracts:
       report:
-        - name: ai-review.md
-          format: ai-review
-  - name: ai_fix
+        - name: ai-antipattern-review.md
+          format: ai-antipattern-review
+  - name: ai-antipattern-fix
     edit: true
     persona: coder
     policy:
@@ -192,16 +192,16 @@ steps:
           - Bash
           - WebSearch
           - WebFetch
-    instruction: ai-fix
+    instruction: ai-antipattern-fix
     pass_previous_response: false
     rules:
       - condition: AI Reviewer's issues have been fixed
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No fix needed (verified target files/spec)
-        next: ai_no_fix
+        next: ai-antipattern-no-fix
       - condition: Unable to proceed with fixes
-        next: ai_no_fix
-  - name: ai_no_fix
+        next: ai-antipattern-no-fix
+  - name: ai-antipattern-no-fix
     edit: false
     persona: architecture-reviewer
     policy: review
@@ -212,9 +212,9 @@ steps:
           - Glob
           - Grep
     rules:
-      - condition: ai_review's findings are valid (fix required)
-        next: ai_fix
-      - condition: ai_fix's judgment is valid (no fix needed)
+      - condition: ai-antipattern-review-1st's findings are valid (fix required)
+        next: ai-antipattern-fix
+      - condition: ai-antipattern-fix's judgment is valid (no fix needed)
         next: reviewers_1
     instruction: arbitrate
   - name: reviewers_1
@@ -293,6 +293,28 @@ steps:
           report:
             - name: testing-review.md
               format: testing-review
+      - name: ai-antipattern-review-2nd
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        provider_options:
+          claude:
+            allowed_tools:
+              - Read
+              - Glob
+              - Grep
+              - WebSearch
+              - WebFetch
+        instruction: ai-antipattern-review
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
     rules:
       - condition: all("approved")
         next: reviewers_2

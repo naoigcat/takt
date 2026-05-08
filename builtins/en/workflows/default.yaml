@@ -10,19 +10,19 @@ max_steps: 30
 initial_step: plan
 loop_monitors:
   - cycle:
-      - ai_review
-      - ai_fix
+      - ai-antipattern-review-1st
+      - ai-antipattern-fix
     threshold: 3
     judge:
       persona: supervisor
       instruction: |
-        The ai_review ↔ ai_fix loop has repeated {cycle_count} times.
+        The ai-antipattern-review-1st ↔ ai-antipattern-fix loop has repeated {cycle_count} times.
 
         Review the reports from each cycle and determine whether this loop
         is healthy (making progress) or unproductive (repeating the same issues).
 
         **Reports to reference:**
-        - AI Review results: {report:ai-review.md}
+        - AI Review results: {report:ai-antipattern-review.md}
 
         **Judgment criteria:**
         - Are new issues being found/fixed in each cycle?
@@ -30,7 +30,7 @@ loop_monitors:
         - Are fixes actually being applied?
       rules:
         - condition: Healthy (making progress)
-          next: ai_review
+          next: ai-antipattern-review-1st
         - condition: Unproductive (no improvement)
           next: reviewers
   - cycle:
@@ -137,11 +137,11 @@ steps:
     instruction: implement-after-tests
     rules:
       - condition: Implementation complete
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No implementation (report only)
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: Cannot proceed, insufficient info
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: User input required
         next: implement
         requires_user_input: true
@@ -152,7 +152,7 @@ steps:
           format: coder-scope
         - name: coder-decisions.md
           format: coder-decisions
-  - name: ai_review
+  - name: ai-antipattern-review-1st
     edit: false
     persona: ai-antipattern-reviewer
     policy:
@@ -166,17 +166,17 @@ steps:
           - Grep
           - WebSearch
           - WebFetch
-    instruction: ai-review
+    instruction: ai-antipattern-review
     rules:
       - condition: No AI-specific issues
         next: reviewers
       - condition: AI-specific issues found
-        next: ai_fix
+        next: ai-antipattern-fix
     output_contracts:
       report:
-        - name: ai-review.md
-          format: ai-review
-  - name: ai_fix
+        - name: ai-antipattern-review.md
+          format: ai-antipattern-review
+  - name: ai-antipattern-fix
     edit: true
     persona: coder
     policy:
@@ -197,11 +197,11 @@ steps:
           - WebSearch
           - WebFetch
     required_permission_mode: edit
-    instruction: ai-fix
+    instruction: ai-antipattern-fix
     pass_previous_response: false
     rules:
       - condition: AI issues fixed
-        next: ai_review
+        next: ai-antipattern-review-1st
       - condition: No fix needed (verified target files/spec)
         next: reviewers
       - condition: Cannot proceed with fixes
@@ -229,6 +229,28 @@ steps:
           report:
             - name: architect-review.md
               format: architecture-review
+      - name: ai-antipattern-review-2nd
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        provider_options:
+          claude:
+            allowed_tools:
+              - Read
+              - Glob
+              - Grep
+              - WebSearch
+              - WebFetch
+        instruction: ai-antipattern-review
+        rules:
+          - condition: No AI-specific issues
+          - condition: AI-specific issues found
+        output_contracts:
+          report:
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
       - name: supervise
         edit: false
         persona: supervisor
@@ -254,9 +276,9 @@ steps:
               format: summary
               use_judge: false
     rules:
-      - condition: all("approved", "All checks passed")
+      - condition: all("approved", "No AI-specific issues", "All checks passed")
         next: COMPLETE
-      - condition: any("needs_fix", "Requirements unmet, tests failing, build errors")
+      - condition: any("needs_fix", "AI-specific issues found", "Requirements unmet, tests failing, build errors")
         next: fix
   - name: fix
     edit: true

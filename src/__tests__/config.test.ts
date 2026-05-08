@@ -150,7 +150,7 @@ describe('default workflow parallel reviewers step', () => {
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers');
     expect(reviewersStep).toBeDefined();
     expect(reviewersStep!.parallel).toBeDefined();
-    expect(reviewersStep!.parallel).toHaveLength(2);
+    expect(reviewersStep!.parallel).toHaveLength(3);
   });
 
   it('should have arch-review and supervise as parallel sub-steps', () => {
@@ -204,19 +204,19 @@ describe('default workflow parallel reviewers step', () => {
     expect(supervise.rules).toHaveLength(2);
   });
 
-  it('should have ai_review transitioning to reviewers step', () => {
+  it('should have ai-antipattern-review-1st transitioning to reviewers step', () => {
     const workflow = getBuiltinWorkflow('default', process.cwd());
-    const aiReviewStep = workflow!.steps.find((s) => s.name === 'ai_review')!;
+    const aiReviewStep = workflow!.steps.find((s) => s.name === 'ai-antipattern-review-1st')!;
 
     const approveRule = aiReviewStep.rules!.find((r) => r.next === 'reviewers');
     expect(approveRule).toBeDefined();
   });
 
-  it('should have ai_fix transitioning to ai_review step', () => {
+  it('should have ai-antipattern-fix transitioning to ai-antipattern-review-1st step', () => {
     const workflow = getBuiltinWorkflow('default', process.cwd());
-    const aiFixStep = workflow!.steps.find((s) => s.name === 'ai_fix')!;
+    const aiFixStep = workflow!.steps.find((s) => s.name === 'ai-antipattern-fix')!;
 
-    const fixedRule = aiFixStep.rules!.find((r) => r.next === 'ai_review');
+    const fixedRule = aiFixStep.rules!.find((r) => r.next === 'ai-antipattern-review-1st');
     expect(fixedRule).toBeDefined();
   });
 

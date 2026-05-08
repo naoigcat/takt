@@ -98,7 +98,7 @@ steps:
           format: coder-decisions
   - name: reviewers
     parallel:
-      - name: ai_review
+      - name: ai-antipattern-review-2nd
         edit: false
         persona: ai-antipattern-reviewer
         policy:
@@ -112,14 +112,14 @@ steps:
               - Grep
               - WebSearch
               - WebFetch
-        instruction: review-ai
+        instruction: ai-antipattern-review
         rules:
           - condition: No AI-specific issues
           - condition: AI-specific issues found
         output_contracts:
           report:
-            - name: ai-review.md
-              format: ai-review
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
       - name: supervise
         edit: false
         persona: dual-supervisor
@@ -156,12 +156,12 @@ steps:
       - condition: all("AI-specific issues found", "Requirements unmet, tests failing")
         next: fix_both
       - condition: any("AI-specific issues found")
-        next: ai_fix
+        next: ai-antipattern-fix
       - condition: any("Requirements unmet, tests failing")
         next: supervise_fix
   - name: fix_both
     parallel:
-      - name: ai_fix_parallel
+      - name: ai-antipattern-fix-parallel
         edit: true
         persona: coder
         policy:
@@ -189,7 +189,7 @@ steps:
           - condition: AI Reviewer's issues fixed
           - condition: No fix needed (verified target files/spec)
           - condition: Cannot proceed, insufficient info
-        instruction: ai-fix
+        instruction: ai-antipattern-fix
       - name: supervise_fix_parallel
         edit: true
         persona: coder
@@ -223,7 +223,7 @@ steps:
         next: reviewers
       - condition: any("No fix needed (verified target files/spec)", "Cannot proceed, insufficient info")
         next: implement
-  - name: ai_fix
+  - name: ai-antipattern-fix
     edit: true
     persona: coder
     policy:
@@ -257,7 +257,7 @@ steps:
         next: implement
       - condition: Cannot proceed, insufficient info
         next: implement
-    instruction: ai-fix
+    instruction: ai-antipattern-fix
   - name: supervise_fix
     edit: true
     persona: coder

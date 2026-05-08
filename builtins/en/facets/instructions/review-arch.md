@@ -1,5 +1,5 @@
 Focus on reviewing **architecture and design**.
-Do not review AI-specific issues (already covered by the ai_review step).
+Do not review AI-specific issues (already covered by the ai-antipattern-review-1st step).
 
 **Review criteria:**
 - Structural and design validity

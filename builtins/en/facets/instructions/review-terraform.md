@@ -1,5 +1,5 @@
 Focus on reviewing **Terraform convention compliance**.
-Do not review AI-specific issues (already covered by the ai_review step).
+Do not review AI-specific issues (already covered by the ai-antipattern-review-1st step).
 
 **Review criteria:**
 - Variable declaration compliance (type, description, sensitive)

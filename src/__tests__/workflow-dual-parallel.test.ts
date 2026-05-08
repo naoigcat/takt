@@ -35,19 +35,20 @@ describe('dual workflow parallel structure', () => {
     expect(workflow!.name).toBe('dual');
   });
 
-  it('should have reviewers_1 parallel step with 3 sub-steps', () => {
+  it('should have reviewers_1 parallel step with 4 sub-steps', () => {
     const reviewers1 = workflow!.steps.find((s) => s.name === 'reviewers_1');
     expect(reviewers1).toBeDefined();
     expect(reviewers1!.parallel).toBeDefined();
-    expect(reviewers1!.parallel!.length).toBe(3);
+    expect(reviewers1!.parallel!.length).toBe(4);
   });
 
-  it('should have arch-review, frontend-review, testing-review in reviewers_1', () => {
+  it('should have arch-review, frontend-review, testing-review, ai-antipattern-review in reviewers_1', () => {
     const reviewers1 = workflow!.steps.find((s) => s.name === 'reviewers_1');
     const subNames = reviewers1!.parallel!.map((s) => s.name);
     expect(subNames).toContain('arch-review');
     expect(subNames).toContain('frontend-review');
     expect(subNames).toContain('testing-review');
+    expect(subNames).toContain('ai-antipattern-review-2nd');
   });
 
   it('should have reviewers_2 parallel step with 3 sub-steps', () => {
@@ -107,8 +108,8 @@ describe('dual workflow parallel structure', () => {
     }
   });
 
-  it('should route ai_review to reviewers_1', () => {
-    const aiReview = workflow!.steps.find((s) => s.name === 'ai_review');
+  it('should route ai-antipattern-review-1st to reviewers_1', () => {
+    const aiReview = workflow!.steps.find((s) => s.name === 'ai-antipattern-review-1st');
     expect(aiReview).toBeDefined();
     const approvedRule = aiReview!.rules!.find((r) => r.next === 'reviewers_1');
     expect(approvedRule).toBeDefined();
@@ -164,7 +165,7 @@ describe('dual-cqrs workflow parallel structure', () => {
     const reviewers = workflow!.steps.find((s) => s.name === 'reviewers');
     expect(reviewers).toBeDefined();
     expect(reviewers!.parallel).toBeDefined();
-    expect(reviewers!.parallel!.length).toBe(4);
+    expect(reviewers!.parallel!.length).toBe(5);
   });
 
   it('should have cqrs-es-review instead of arch-review', () => {
@@ -175,6 +176,7 @@ describe('dual-cqrs workflow parallel structure', () => {
     expect(subNames).toContain('frontend-review');
     expect(subNames).toContain('security-review');
     expect(subNames).toContain('qa-review');
+    expect(subNames).toContain('ai-antipattern-review-2nd');
   });
 
   it('should have aggregate rules on reviewers step', () => {
@@ -195,8 +197,8 @@ describe('dual-cqrs workflow parallel structure', () => {
     }
   });
 
-  it('should route ai_review to reviewers', () => {
-    const aiReview = workflow!.steps.find((s) => s.name === 'ai_review');
+  it('should route ai-antipattern-review-1st to reviewers', () => {
+    const aiReview = workflow!.steps.find((s) => s.name === 'ai-antipattern-review-1st');
     expect(aiReview).toBeDefined();
     const approvedRule = aiReview!.rules!.find((r) => r.next === 'reviewers');
     expect(approvedRule).toBeDefined();

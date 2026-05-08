@@ -137,7 +137,7 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('should complete: plan → write_tests → implement → ai_review → reviewers (parallel: arch-review + supervise) → COMPLETE', async () => {
+  it('should complete: plan → write_tests → implement → ai-antipattern-review-1st → reviewers (parallel: arch-review + ai-antipattern-review + supervise) → COMPLETE', async () => {
     const config = loadWorkflow('default', testDir);
     expect(config).not.toBeNull();
 
@@ -147,6 +147,7 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
       { persona: 'coder', status: 'done', content: 'Implementation complete' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -157,7 +158,7 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
     expect(state.iteration).toBe(5);
   });
 
-  it('should route implement → ai_review even when implement cannot proceed', async () => {
+  it('should route implement → ai-antipattern-review-1st even when implement cannot proceed', async () => {
     const config = loadWorkflow('default', testDir);
 
     setMockScenario([
@@ -166,6 +167,7 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
       { persona: 'coder', status: 'done', content: 'Cannot proceed, insufficient info' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -200,11 +202,9 @@ describe('Workflow Patterns IT: default workflow (parallel reviewers)', () => {
       { persona: 'coder', status: 'done', content: 'Tests written successfully' },
       { persona: 'coder', status: 'done', content: 'Implementation complete' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
-      // Parallel reviewers: all approved
+      // Parallel reviewers: all approved (default has [arch-review, ai-antipattern-review, supervise])
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
-      { persona: 'qa-reviewer', status: 'done', content: 'approved' },
-      { persona: 'testing-reviewer', status: 'done', content: 'approved' },
-      // Supervisor
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -223,8 +223,7 @@ describe('Workflow Patterns IT: default workflow (parallel reviewers)', () => {
       { persona: 'coder', status: 'done', content: 'Implementation complete' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
-      { persona: 'qa-reviewer', status: 'done', content: 'approved' },
-      { persona: 'testing-reviewer', status: 'done', content: 'approved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -242,17 +241,15 @@ describe('Workflow Patterns IT: default workflow (parallel reviewers)', () => {
       { persona: 'coder', status: 'done', content: 'Tests written successfully' },
       { persona: 'coder', status: 'done', content: 'Implementation complete' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
-      // Parallel: arch approved, qa needs_fix, testing approved
+      // Parallel: arch approved, ai-antipattern approved, supervise needs_fix
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
-      { persona: 'qa-reviewer', status: 'done', content: 'needs_fix' },
-      { persona: 'testing-reviewer', status: 'done', content: 'approved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
+      { persona: 'supervisor', status: 'done', content: 'Requirements unmet, tests failing, build errors' },
       // Fix step
       { persona: 'coder', status: 'done', content: 'Fix complete' },
       // Re-review: all approved
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
-      { persona: 'qa-reviewer', status: 'done', content: 'approved' },
-      { persona: 'testing-reviewer', status: 'done', content: 'approved' },
-      // Supervisor
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -286,6 +283,7 @@ describe('Workflow Patterns IT: default workflow (write_tests skip path)', () =>
       { persona: 'coder', status: 'done', content: 'Implementation complete' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
@@ -452,11 +450,12 @@ describe('Workflow Patterns IT: dual workflow (2-stage parallel reviewers)', () 
       { persona: 'coder', status: 'done', content: 'Decomposed into 1 part.', structuredOutput: { parts: [{ id: 'part-1', title: 'Implement all', instruction: 'Implement the task.' }] } },
       // Team leader part execution
       { persona: 'coder', status: 'done', content: '[IMPLEMENT:1]\n\nDone.' },
-      { persona: 'ai-antipattern-reviewer', status: 'done', content: '[AI_REVIEW:1]\n\nNo issues.' },
-      // Stage 1: 3 parallel reviewers (arch, frontend, testing)
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: '[AI-ANTIPATTERN-REVIEW-1ST:1]\n\nNo issues.' },
+      // Stage 1: 4 parallel reviewers (arch, frontend, testing, ai-antipattern)
       { persona: 'architecture-reviewer', status: 'done', content: '[ARCH-REVIEW:1]\n\napproved' },
       { persona: 'frontend-reviewer', status: 'done', content: '[FRONTEND-REVIEW:1]\n\napproved' },
       { persona: 'testing-reviewer', status: 'done', content: '[TESTING-REVIEW:1]\n\napproved' },
+      { persona: 'ai-antipattern-reviewer', status: 'done', content: '[AI-ANTIPATTERN-REVIEW-2ND:1]\n\napproved' },
       // Stage 2: 3 parallel reviewers (security, qa, requirements)
       { persona: 'security-reviewer', status: 'done', content: '[SECURITY-REVIEW:1]\n\napproved' },
       { persona: 'qa-reviewer', status: 'done', content: '[QA-REVIEW:1]\n\napproved' },

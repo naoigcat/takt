@@ -1059,11 +1059,12 @@ describe('Workflow Loader IT: parallel step loading', () => {
 
     const reviewers1 = config!.steps.find((s) => s.name === 'reviewers_1');
     expect(reviewers1).toBeDefined();
-    expect(reviewers1!.parallel!.length).toBe(3);
+    expect(reviewers1!.parallel!.length).toBe(4);
     const stage1Names = reviewers1!.parallel!.map((s) => s.name);
     expect(stage1Names).toContain('arch-review');
     expect(stage1Names).toContain('frontend-review');
     expect(stage1Names).toContain('testing-review');
+    expect(stage1Names).toContain('ai-antipattern-review-2nd');
 
     const reviewers2 = config!.steps.find((s) => s.name === 'reviewers_2');
     expect(reviewers2).toBeDefined();
