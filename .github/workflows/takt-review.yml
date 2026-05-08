@@ -4,6 +4,10 @@ on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review, reopened]
 
+concurrency:
+  group: takt-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   review:
     runs-on: ubuntu-latest
