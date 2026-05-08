@@ -288,6 +288,7 @@ export class CodexClient {
         diag.onConnected();
 
         let content = '';
+        let lastAgentMessageText = '';
         const contentOffsets = new Map<string, number>();
         let success = true;
         let failureMessage = '';
@@ -362,6 +363,7 @@ export class CodexClient {
               if (item.type === 'agent_message' && typeof item.text === 'string') {
                 const itemId = item.id;
                 const text = item.text;
+                lastAgentMessageText = text;
                 if (itemId) {
                   const prev = contentOffsets.get(itemId) ?? 0;
                   if (text.length > prev) {
@@ -416,7 +418,7 @@ export class CodexClient {
         }
 
         const trimmed = content.trim();
-        const structuredOutput = parseStructuredOutput(trimmed, !!options.outputSchema);
+        const structuredOutput = parseStructuredOutput(lastAgentMessageText.trim(), !!options.outputSchema);
         emitResult(options.onStream, true, trimmed, currentThreadId);
 
         const response: AgentResponse = {
