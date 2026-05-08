@@ -2,13 +2,16 @@ import type {
   TaktProviderConfigEntry,
   TaktProvidersConfig,
 } from '../../core/models/config-types.js';
+import type { ProviderType } from '../../shared/types/provider.js';
 import { validateProviderModelCompatibility } from './providerModelCompatibility.js';
 
+type RawTaktAssistantProvider = {
+  provider?: ProviderType;
+  model?: string;
+};
+
 export function normalizeTaktProviders(raw: {
-  assistant?: {
-    provider?: TaktProviderConfigEntry['provider'];
-    model?: string;
-  };
+  assistant?: RawTaktAssistantProvider;
 } | undefined): TaktProvidersConfig | undefined {
   if (!raw) {
     return undefined;
@@ -21,12 +24,7 @@ export function normalizeTaktProviders(raw: {
 }
 
 function normalizeTaktAssistantProvider(
-  assistant:
-    | {
-      provider?: TaktProviderConfigEntry['provider'];
-      model?: string;
-    }
-    | undefined,
+  assistant: RawTaktAssistantProvider | undefined,
 ): TaktProviderConfigEntry | undefined {
   if (!assistant) {
     return undefined;
