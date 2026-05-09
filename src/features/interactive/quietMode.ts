@@ -54,7 +54,7 @@ export async function quietMode(
     : [];
 
   if (history.length === 0 && !sourceContext) {
-    info(getLabel('interactive.ui.intro', ctx.lang));
+    info(getLabel('interactive.ui.introQuiet', ctx.lang));
     blankLine();
 
     const input = await readMultilineInput(chalk.green('> '));

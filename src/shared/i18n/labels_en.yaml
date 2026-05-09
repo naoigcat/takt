@@ -12,6 +12,8 @@ interactive:
   noTranscript: "(No local transcript. Summarize the current session context.)"
   ui:
     intro: "Interactive mode - describe your task. Commands: /go (create instruction & run), /play (run now), /resume (load session), /cancel (exit)"
+    introQuiet: "Quiet mode - describe your task. Instructions will be generated without further questions."
+    introPassthrough: "Passthrough mode - describe your task. Your input will be passed directly as the task."
     resume: "Resuming previous session"
     noConversation: "No conversation yet. Please describe your task first."
     thinking: "Assistant is thinking..."

@@ -54,10 +54,12 @@ vi.mock('../shared/prompt/index.js', () => ({
 
 import { getProvider } from '../infra/providers/index.js';
 import { selectOptionWithDefault, selectOption } from '../shared/prompt/index.js';
+import { info } from '../shared/ui/index.js';
 
 const mockGetProvider = vi.mocked(getProvider);
 const mockSelectOptionWithDefault = vi.mocked(selectOptionWithDefault);
 const mockSelectOption = vi.mocked(selectOption);
+const mockInfo = vi.mocked(info);
 
 // ── Stdin helpers (same pattern as interactive.test.ts) ──
 
@@ -289,6 +291,24 @@ describe('passthroughMode', () => {
     expect(result.task).toBe('my task text');
   });
 
+  it('should show passthrough intro without slash command guidance when prompting for input', async () => {
+    // Given
+    setupRawStdin(toRawInputs([null]));
+
+    // When
+    await passthroughMode('ja');
+
+    // Then
+    expect(mockInfo).toHaveBeenCalledWith(
+      'パススルーモード - タスク内容を入力してください。入力内容をそのまま実行します。',
+    );
+    const introMessage = mockInfo.mock.calls[0]?.[0] as string;
+    expect(introMessage).not.toContain('/go');
+    expect(introMessage).not.toContain('/play');
+    expect(introMessage).not.toContain('/resume');
+    expect(introMessage).not.toContain('/cancel');
+  });
+
   it('should return cancel when user sends EOF', async () => {
     // Given
     setupRawStdin(toRawInputs([null]));
@@ -350,6 +370,24 @@ describe('quietMode', () => {
     // Then
     expect(result.action).toBe('execute');
     expect(result.task).toBe('Generated task instruction for login feature.');
+  });
+
+  it('should show quiet intro without slash command guidance when prompting for input', async () => {
+    // Given
+    setupRawStdin(toRawInputs([null]));
+
+    // When
+    await quietMode('/project');
+
+    // Then
+    expect(mockInfo).toHaveBeenCalledWith(
+      'Quiet mode - describe your task. Instructions will be generated without further questions.',
+    );
+    const introMessage = mockInfo.mock.calls[0]?.[0] as string;
+    expect(introMessage).not.toContain('/go');
+    expect(introMessage).not.toContain('/play');
+    expect(introMessage).not.toContain('/resume');
+    expect(introMessage).not.toContain('/cancel');
   });
 
   it('should summarize initialInput as source context instead of conversation history', async () => {

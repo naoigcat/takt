@@ -29,7 +29,7 @@ export async function passthroughMode(
     return { action: 'execute', task: initialInput };
   }
 
-  info(getLabel('interactive.ui.intro', lang));
+  info(getLabel('interactive.ui.introPassthrough', lang));
   blankLine();
 
   const input = await readMultilineInput(chalk.green('> '));
