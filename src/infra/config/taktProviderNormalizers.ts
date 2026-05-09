@@ -10,20 +10,24 @@ type RawTaktAssistantProvider = {
   model?: string;
 };
 
+type RawTaktProvidersConfig = {
+  assistant?: RawTaktAssistantProvider;
+};
+
 type NormalizableTaktAssistantProvider =
   | (RawTaktAssistantProvider & { provider: ProviderType })
   | (RawTaktAssistantProvider & { model: string });
 
-export function normalizeTaktProviders(raw: {
-  assistant?: RawTaktAssistantProvider;
-} | undefined): TaktProvidersConfig | undefined {
-  if (!raw) {
+export function normalizeTaktProviders(
+  taktProviders: RawTaktProvidersConfig | undefined
+): TaktProvidersConfig | undefined {
+  if (taktProviders === undefined) {
     return undefined;
   }
-  if (raw.assistant === undefined) {
+  if (taktProviders.assistant === undefined) {
     return undefined;
   }
-  const assistant = normalizeTaktAssistantProvider(raw.assistant);
+  const assistant = normalizeTaktAssistantProvider(taktProviders.assistant);
   return { assistant };
 }
 
