@@ -60,7 +60,7 @@ function assertNormalizableTaktAssistantProvider(
 
 export function buildRawTaktProvidersOrThrow(
   taktProviders: TaktProvidersConfig | undefined,
-): { assistant: TaktProviderConfigEntry } | undefined {
+): TaktProvidersConfig | undefined {
   if (taktProviders === undefined) {
     return undefined;
   }
