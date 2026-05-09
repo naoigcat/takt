@@ -27,6 +27,19 @@ export function normalizeTaktProviders(raw: {
   return { assistant };
 }
 
+export function buildRawTaktProvidersOrThrow(
+  taktProviders: TaktProvidersConfig | undefined,
+): TaktProvidersConfig | undefined {
+  if (taktProviders === undefined) {
+    return undefined;
+  }
+  if (taktProviders.assistant === undefined) {
+    throw new Error("Configuration error: 'taktProviders.assistant' is required when taktProviders is set.");
+  }
+  const assistant = normalizeTaktAssistantProvider(taktProviders.assistant);
+  return { assistant };
+}
+
 function normalizeTaktAssistantProvider(
   assistant: RawTaktAssistantProvider,
 ): TaktProviderConfigEntry {
@@ -56,17 +69,4 @@ function assertNormalizableTaktAssistantProvider(
   }
 
   throw new Error("Configuration error: 'takt_providers.assistant' must include provider or model.");
-}
-
-export function buildRawTaktProvidersOrThrow(
-  taktProviders: TaktProvidersConfig | undefined,
-): TaktProvidersConfig | undefined {
-  if (taktProviders === undefined) {
-    return undefined;
-  }
-  if (taktProviders.assistant === undefined) {
-    throw new Error("Configuration error: 'taktProviders.assistant' is required when taktProviders is set.");
-  }
-  const assistant = normalizeTaktAssistantProvider(taktProviders.assistant);
-  return { assistant };
 }
