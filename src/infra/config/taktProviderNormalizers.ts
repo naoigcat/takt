@@ -20,7 +20,7 @@ export function normalizeTaktProviders(raw: {
   return { assistant: normalizedAssistant };
 }
 
-export function normalizeTaktAssistantProvider(
+function normalizeTaktAssistantProvider(
   assistant:
     | {
       provider?: TaktProviderConfigEntry['provider'];
