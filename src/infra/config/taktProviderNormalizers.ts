@@ -24,7 +24,7 @@ export function normalizeTaktProviders(raw: {
     return undefined;
   }
   const assistant = normalizeTaktAssistantProvider(raw.assistant);
-  return { assistant: assistant };
+  return { assistant };
 }
 
 function normalizeTaktAssistantProvider(
