@@ -72,6 +72,91 @@ describe('CodexClient — structuredOutput 抽出', () => {
     expect(result.structuredOutput).toEqual({ step: 2, reason: 'approved' });
   });
 
+  it('複数の agent_message JSON がある場合は最後の JSON を structuredOutput として返す', async () => {
+    const schema = { type: 'object', properties: { step: { type: 'integer' } } };
+    mockEvents = [
+      { type: 'thread.started', thread_id: 'thread-1' },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-1', type: 'agent_message', text: '{"step": 1, "reason": "stale"}' },
+      },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-2', type: 'agent_message', text: '{"step": 2, "reason": "final"}' },
+      },
+      { type: 'turn.completed', usage: { input_tokens: 0, cached_input_tokens: 0, output_tokens: 0 } },
+    ];
+
+    const client = new CodexClient();
+    const result = await client.call('coder', 'prompt', { cwd: '/tmp', outputSchema: schema });
+
+    expect(result.status).toBe('done');
+    expect(result.structuredOutput).toEqual({ step: 2, reason: 'final' });
+  });
+
+  it('最後の agent_message が JSON でない場合は途中の JSON を structuredOutput として採用しない', async () => {
+    const schema = { type: 'object', properties: { step: { type: 'integer' } } };
+    mockEvents = [
+      { type: 'thread.started', thread_id: 'thread-1' },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-1', type: 'agent_message', text: '{"step": 1, "reason": "stale"}' },
+      },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-2', type: 'agent_message', text: 'plain text final response' },
+      },
+      { type: 'turn.completed', usage: { input_tokens: 0, cached_input_tokens: 0, output_tokens: 0 } },
+    ];
+
+    const client = new CodexClient();
+    const result = await client.call('coder', 'prompt', { cwd: '/tmp', outputSchema: schema });
+
+    expect(result.status).toBe('done');
+    expect(result.structuredOutput).toBeUndefined();
+  });
+
+  it('item.updated の agent_message JSON は structuredOutput として採用しない', async () => {
+    const schema = { type: 'object', properties: { step: { type: 'integer' } } };
+    mockEvents = [
+      { type: 'thread.started', thread_id: 'thread-1' },
+      {
+        type: 'item.updated',
+        item: { id: 'msg-1', type: 'agent_message', text: '{"step": 1, "reason": "draft"}' },
+      },
+      { type: 'turn.completed', usage: { input_tokens: 0, cached_input_tokens: 0, output_tokens: 0 } },
+    ];
+
+    const client = new CodexClient();
+    const result = await client.call('coder', 'prompt', { cwd: '/tmp', outputSchema: schema });
+
+    expect(result.status).toBe('done');
+    expect(result.content).toBe('{"step": 1, "reason": "draft"}');
+    expect(result.structuredOutput).toBeUndefined();
+  });
+
+  it('複数の agent_message がある場合も content は全テキストを改行連結して返す', async () => {
+    const schema = { type: 'object', properties: { step: { type: 'integer' } } };
+    mockEvents = [
+      { type: 'thread.started', thread_id: 'thread-1' },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-1', type: 'agent_message', text: '{"step": 1, "reason": "stale"}' },
+      },
+      {
+        type: 'item.completed',
+        item: { id: 'msg-2', type: 'agent_message', text: '{"step": 2, "reason": "final"}' },
+      },
+      { type: 'turn.completed', usage: { input_tokens: 0, cached_input_tokens: 0, output_tokens: 0 } },
+    ];
+
+    const client = new CodexClient();
+    const result = await client.call('coder', 'prompt', { cwd: '/tmp', outputSchema: schema });
+
+    expect(result.status).toBe('done');
+    expect(result.content).toBe('{"step": 1, "reason": "stale"}\n{"step": 2, "reason": "final"}');
+  });
+
   it('outputSchema なしの場合はテキストを JSON パースしない', async () => {
     mockEvents = [
       { type: 'thread.started', thread_id: 'thread-1' },
