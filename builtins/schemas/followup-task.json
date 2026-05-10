@@ -24,11 +24,17 @@
           }
         }
       },
+      "required": [
+        "create",
+        "labels"
+      ],
       "additionalProperties": false
     }
   },
   "required": [
-    "action"
+    "action",
+    "task_markdown",
+    "issue"
   ],
   "additionalProperties": false
 }

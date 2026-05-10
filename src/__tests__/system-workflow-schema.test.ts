@@ -8,6 +8,33 @@ import { normalizeWorkflowConfig } from '../infra/config/loaders/workflowParser.
 
 const TAKT_MANAGED_LABEL = 'takt-managed';
 
+function expectNativeStructuredOutputCompatibleSchema(schema: unknown): void {
+  if (schema == null || typeof schema !== 'object' || Array.isArray(schema)) {
+    return;
+  }
+
+  const objectSchema = schema as {
+    type?: unknown;
+    properties?: unknown;
+    required?: unknown;
+    items?: unknown;
+  };
+
+  if (objectSchema.type === 'object' && objectSchema.properties !== undefined) {
+    expect(Array.isArray(objectSchema.required)).toBe(true);
+    const propertyNames = Object.keys(objectSchema.properties as Record<string, unknown>).sort();
+    expect([...(objectSchema.required as string[])].sort()).toEqual(propertyNames);
+
+    for (const propertySchema of Object.values(objectSchema.properties as Record<string, unknown>)) {
+      expectNativeStructuredOutputCompatibleSchema(propertySchema);
+    }
+  }
+
+  if (objectSchema.type === 'array') {
+    expectNativeStructuredOutputCompatibleSchema(objectSchema.items);
+  }
+}
+
 describe('system workflow schema', () => {
   it('system step で mode/system_inputs/effects/when を保持できる', () => {
     const result = WorkflowStepRawSchema.safeParse({
@@ -1091,7 +1118,7 @@ describe('system workflow schema', () => {
       expect(structuredOutput.schemaRef).toBe('followup-task');
       expect(structuredOutput.schema).toEqual(expect.objectContaining({
         type: 'object',
-        required: ['action'],
+        required: ['action', 'task_markdown', 'issue'],
         additionalProperties: false,
         properties: expect.objectContaining({
           action: {
@@ -1110,10 +1137,12 @@ describe('system workflow schema', () => {
                 items: { type: 'string' },
               },
             },
+            required: ['create', 'labels'],
             additionalProperties: false,
           },
         }),
       }));
+      expectNativeStructuredOutputCompatibleSchema(structuredOutput.schema);
       expect((structuredOutput.schema.properties as Record<string, unknown>).pr_comment_markdown).toBeUndefined();
     } finally {
       rmSync(workflowDir, { recursive: true, force: true });
@@ -1202,7 +1231,7 @@ describe('system workflow schema', () => {
       expect(structuredOutput.schemaRef).toBe('pr-followup-task');
       expect(structuredOutput.schema).toEqual(expect.objectContaining({
         type: 'object',
-        required: ['action'],
+        required: ['action', 'task_markdown'],
         additionalProperties: false,
         properties: expect.objectContaining({
           action: {
@@ -1218,6 +1247,7 @@ describe('system workflow schema', () => {
           },
         }),
       }));
+      expectNativeStructuredOutputCompatibleSchema(structuredOutput.schema);
       expect((structuredOutput.schema.properties as Record<string, unknown>).issue).toBeUndefined();
     } finally {
       rmSync(workflowDir, { recursive: true, force: true });

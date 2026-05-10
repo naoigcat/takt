@@ -87,7 +87,9 @@ steps:
 
       Do not implement anything. Output only the next task instruction in task_markdown.
       Output the next action in action.
-      If needed, output the issue creation plan in issue.
+      Always output task_markdown and issue.
+      For wait_before_next_scan, set task_markdown to an empty string and issue to { create: false, labels: [] }.
+      For an existing issue task, set issue.create to false unless a new GitHub Issue is explicitly needed.
 
       Allowed action values:
       - enqueue_new_task
@@ -148,7 +150,9 @@ steps:
 
       Do not implement anything. Output only the next task instruction in task_markdown.
       Output the next action in action.
-      If needed, output the issue creation plan in issue.
+      Always output task_markdown and issue.
+      For wait_before_next_scan, set task_markdown to an empty string and issue to { create: false, labels: [] }.
+      For a fresh improvement task, set issue.create to true so the task is backed by a GitHub Issue.
 
       Allowed action values:
       - enqueue_new_task
@@ -199,7 +203,9 @@ steps:
       - head_branch: {context:route_context.selected_pr.head_branch}
 
       Output the next action in action.
-      If a follow-up implementation task is needed, output it in task_markdown.
+      Always output task_markdown.
+      For prepare_merge or reject_pr, set task_markdown to an empty string.
+      For enqueue_from_pr, output the follow-up implementation task in task_markdown.
 
       Allowed action values:
       - enqueue_from_pr

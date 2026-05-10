@@ -131,7 +131,7 @@ function expectAutoImprovementLoopDownstreamContract(config: NonNullable<ReturnT
   expect(planFromExistingPrStructuredOutput?.schemaRef).toBe('pr-followup-task');
   expect(planFromExistingPrStructuredOutput?.schema).toEqual(expect.objectContaining({
     type: 'object',
-    required: ['action'],
+    required: ['action', 'task_markdown'],
     additionalProperties: false,
     properties: expect.objectContaining({
       action: {

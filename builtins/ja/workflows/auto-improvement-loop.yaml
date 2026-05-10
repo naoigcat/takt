@@ -87,7 +87,9 @@ steps:
 
       実装は行わず、次タスクの指示書だけを task_markdown に出力してください。
       action には次アクションを出力してください。
-      必要なら issue に Issue 作成方針を出力してください。
+      task_markdown と issue は必ず出力してください。
+      wait_before_next_scan の場合、task_markdown は空文字、issue は { create: false, labels: [] } にしてください。
+      既存 Issue 起点の task では、新しい GitHub Issue が明示的に必要な場合以外は issue.create を false にしてください。
 
       action の候補:
       - enqueue_new_task
@@ -148,7 +150,9 @@ steps:
 
       実装は行わず、次タスクの指示書だけを task_markdown に出力してください。
       action には次アクションを出力してください。
-      必要なら issue に Issue 作成方針を出力してください。
+      task_markdown と issue は必ず出力してください。
+      wait_before_next_scan の場合、task_markdown は空文字、issue は { create: false, labels: [] } にしてください。
+      fresh improvement task では、task が GitHub Issue に紐づくように issue.create を true にしてください。
 
       action の候補:
       - enqueue_new_task
@@ -199,7 +203,9 @@ steps:
       - head_branch: {context:route_context.selected_pr.head_branch}
 
       action には次アクションを出力してください。
-      修正 task が必要なら task_markdown に出力してください。
+      task_markdown は必ず出力してください。
+      prepare_merge / reject_pr の場合、task_markdown は空文字にしてください。
+      enqueue_from_pr の場合、修正 task を task_markdown に出力してください。
 
       action の候補:
       - enqueue_from_pr

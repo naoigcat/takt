@@ -1563,6 +1563,7 @@ describe('system workflow execution integration', () => {
           task_markdown: '## Task\nHandle issue safely',
           issue: {
             create: false,
+            labels: [],
           },
         },
       },
@@ -1935,6 +1936,11 @@ describe('system workflow execution integration', () => {
         content: 'Reject this issue as if it were a PR.',
         structuredOutput: {
           action: 'reject_pr',
+          task_markdown: '',
+          issue: {
+            create: false,
+            labels: [],
+          },
         },
       },
     ]);
@@ -1979,6 +1985,7 @@ describe('system workflow execution integration', () => {
           task_markdown: '## Task\nHandle issue safely',
           issue: {
             create: false,
+            labels: [],
           },
         },
       },
@@ -2333,6 +2340,7 @@ describe('system workflow execution integration', () => {
         content: 'Reject the current PR.',
         structuredOutput: {
           action: 'reject_pr',
+          task_markdown: '',
         },
       },
     ]);
