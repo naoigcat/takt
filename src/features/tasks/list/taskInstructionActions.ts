@@ -31,48 +31,50 @@ import { prepareTaskForExecution } from './prepareTaskForExecution.js';
 
 const log = createLogger('list-tasks');
 
-function getBranchContext(projectDir: string, branch: string): string {
-  const defaultBranch = detectDefaultBranch(projectDir);
-  const lines: string[] = [];
-
+function collectBranchDiffSection(projectDir: string, defaultBranch: string, branch: string): readonly string[] {
   try {
     const diffStat = execFileSync(
       'git', ['diff', '--stat', `${defaultBranch}...${branch}`],
       { cwd: projectDir, encoding: 'utf-8', stdio: 'pipe' },
     ).trim();
-    if (diffStat) {
-      lines.push('## 現在の変更内容（mainからの差分）');
-      lines.push('```');
-      lines.push(diffStat);
-      lines.push('```');
-    }
+    return diffStat
+      ? ['## 現在の変更内容（mainからの差分）', '```', diffStat, '```']
+      : [];
   } catch (err) {
     log.debug('Failed to collect branch diff stat for instruction context', {
       branch,
       defaultBranch,
       error: getErrorMessage(err),
     });
+    return [];
   }
+}
 
+function collectBranchCommitSection(projectDir: string, defaultBranch: string, branch: string): readonly string[] {
   try {
     const commitLog = execFileSync(
       'git', ['log', '--oneline', `${defaultBranch}..${branch}`],
       { cwd: projectDir, encoding: 'utf-8', stdio: 'pipe' },
     ).trim();
-    if (commitLog) {
-      lines.push('');
-      lines.push('## コミット履歴');
-      lines.push('```');
-      lines.push(commitLog);
-      lines.push('```');
-    }
+    return commitLog
+      ? ['', '## コミット履歴', '```', commitLog, '```']
+      : [];
   } catch (err) {
     log.debug('Failed to collect branch commit log for instruction context', {
       branch,
       defaultBranch,
       error: getErrorMessage(err),
     });
+    return [];
   }
+}
+
+function getBranchContext(projectDir: string, branch: string): string {
+  const defaultBranch = detectDefaultBranch(projectDir);
+  const lines = [
+    ...collectBranchDiffSection(projectDir, defaultBranch, branch),
+    ...collectBranchCommitSection(projectDir, defaultBranch, branch),
+  ];
 
   return lines.length > 0 ? `${lines.join('\n')}\n\n` : '';
 }
@@ -96,13 +98,18 @@ export async function instructBranch(
   const globalConfig = resolveWorkflowConfigValues(projectDir, ['interactivePreviewSteps', 'language']);
   const lang = resolveLanguage(globalConfig.language);
   const matchedSlug = findRunForTask(worktreePath, target.content);
-  const selectedWorkflow = await selectWorkflowWithOptionalReuse(projectDir, target.data?.workflow, lang);
+  const selectedWorkflow = await selectWorkflowWithOptionalReuse(projectDir, target.data?.workflow, worktreePath, lang);
   if (!selectedWorkflow) {
     info('Cancelled');
     return false;
   }
 
-  const workflowDesc = getWorkflowDescription(selectedWorkflow, projectDir, globalConfig.interactivePreviewSteps);
+  const workflowDesc = getWorkflowDescription(
+    selectedWorkflow,
+    projectDir,
+    globalConfig.interactivePreviewSteps,
+    worktreePath,
+  );
   const workflowContext: WorkflowContext = {
     name: workflowDesc.name,
     description: workflowDesc.description,

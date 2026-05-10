@@ -17,7 +17,7 @@ import {
 } from './taskActions.js';
 import { deleteTaskByKind, deleteAllTasks } from './taskDeleteActions.js';
 import { forceFailRunningTask } from './taskForceFailActions.js';
-import { retryFailedTask } from './taskRetryActions.js';
+import * as taskRetryActions from './taskRetryActions.js';
 import { listTasksNonInteractive, type ListNonInteractiveOptions } from './listNonInteractive.js';
 import { formatTaskStatusLabel, formatShortDate } from './taskStatusLabel.js';
 
@@ -42,7 +42,7 @@ export {
 type PendingTaskAction = 'delete';
 type ExceededTaskAction = 'requeue' | 'delete';
 type RunningTaskAction = 'force_fail';
-type FailedTaskAction = 'retry' | 'delete';
+type FailedTaskAction = 'requeue' | 'retry' | 'delete';
 type PrFailedTaskAction = ListAction;
 type CompletedTaskAction = ListAction;
 
@@ -105,7 +105,8 @@ async function showFailedTaskAndPromptAction(task: TaskListItem): Promise<Failed
   return await selectOption<FailedTaskAction>(
     `Action for ${task.name}:`,
     [
-      { label: 'Retry', value: 'retry', description: 'Requeue task and select start step' },
+      { label: 'Requeue', value: 'requeue', description: 'Requeue without conversation' },
+      { label: 'Retry', value: 'retry', description: 'Analyze failure in conversation, then re-run' },
       { label: 'Delete', value: 'delete', description: 'Remove this task permanently' },
     ],
   );
@@ -238,8 +239,10 @@ export async function listTasks(
       const task = tasks[idx];
       if (!task) continue;
       const taskAction = await showFailedTaskAndPromptAction(task);
-      if (taskAction === 'retry') {
-        await retryFailedTask(task, cwd);
+      if (taskAction === 'requeue') {
+        await taskRetryActions.requeueFailedTask(task, cwd);
+      } else if (taskAction === 'retry') {
+        await taskRetryActions.retryFailedTask(task, cwd);
       } else if (taskAction === 'delete') {
         await deleteTaskByKind(task);
       }

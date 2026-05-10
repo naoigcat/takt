@@ -13,6 +13,8 @@ const {
   mockDeleteCompletedTask,
   mockRequeueExceededTask,
   mockForceFailRunningTask,
+  mockRetryFailedTask,
+  mockRequeueFailedTask,
 } = vi.hoisted(() => ({
   mockSelectOption: vi.fn(),
   mockHeader: vi.fn(),
@@ -25,6 +27,8 @@ const {
   mockDeleteCompletedTask: vi.fn(),
   mockRequeueExceededTask: vi.fn(),
   mockForceFailRunningTask: vi.fn(),
+  mockRetryFailedTask: vi.fn(),
+  mockRequeueFailedTask: vi.fn(),
 }));
 
 vi.mock('../infra/task/index.js', () => ({
@@ -66,7 +70,8 @@ vi.mock('../features/tasks/list/taskDeleteActions.js', () => ({
 }));
 
 vi.mock('../features/tasks/list/taskRetryActions.js', () => ({
-  retryFailedTask: vi.fn(),
+  retryFailedTask: mockRetryFailedTask,
+  requeueFailedTask: mockRequeueFailedTask,
 }));
 
 vi.mock('../features/tasks/list/taskForceFailActions.js', () => ({
@@ -106,6 +111,18 @@ const exceededTask: TaskListItem = {
   content: 'iteration limit reached',
   exceededMaxSteps: 60,
   exceededCurrentIteration: 30,
+};
+
+const failedTask: TaskListItem = {
+  kind: 'failed',
+  name: 'failed-task',
+  createdAt: '2026-02-14T00:00:00.000Z',
+  filePath: '/project/.takt/tasks.yaml',
+  content: 'failed content',
+  branch: 'takt/failed-task',
+  worktreePath: '/project/.takt/worktrees/failed-task',
+  data: { task: 'failed content', workflow: 'default' },
+  failure: { step: 'review', error: 'Boom' },
 };
 
 describe('listTasks interactive status actions', () => {
@@ -229,6 +246,63 @@ describe('listTasks interactive status actions', () => {
 
       expect(mockRequeueExceededTask).not.toHaveBeenCalled();
       expect(mockDeleteCompletedTask).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('failed status action handling', () => {
+    it('failed タスクのアクションは Requeue, Retry, Delete の順で表示する', async () => {
+      mockListAllTaskItems.mockReturnValue([failedTask]);
+      mockSelectOption
+        .mockResolvedValueOnce('failed:0')
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+
+      await listTasks('/project');
+
+      expect(mockSelectOption.mock.calls[1]?.[1]).toEqual([
+        expect.objectContaining({
+          label: 'Requeue',
+          value: 'requeue',
+          description: expect.stringContaining('without conversation'),
+        }),
+        expect.objectContaining({
+          label: 'Retry',
+          value: 'retry',
+          description: expect.stringContaining('conversation'),
+        }),
+        expect.objectContaining({
+          label: 'Delete',
+          value: 'delete',
+          description: 'Remove this task permanently',
+        }),
+      ]);
+    });
+
+    it('failed requeue 選択時は requeueFailedTask を呼ぶ', async () => {
+      mockListAllTaskItems.mockReturnValue([failedTask]);
+      mockSelectOption
+        .mockResolvedValueOnce('failed:0')
+        .mockResolvedValueOnce('requeue')
+        .mockResolvedValueOnce(null);
+
+      await listTasks('/project');
+
+      expect(mockRequeueFailedTask).toHaveBeenCalledWith(failedTask, '/project');
+      expect(mockRetryFailedTask).not.toHaveBeenCalled();
+      expect(mockDeleteCompletedTask).not.toHaveBeenCalled();
+    });
+
+    it('failed retry 選択時は retryFailedTask を呼ぶ', async () => {
+      mockListAllTaskItems.mockReturnValue([failedTask]);
+      mockSelectOption
+        .mockResolvedValueOnce('failed:0')
+        .mockResolvedValueOnce('retry')
+        .mockResolvedValueOnce(null);
+
+      await listTasks('/project');
+
+      expect(mockRetryFailedTask).toHaveBeenCalledWith(failedTask, '/project');
+      expect(mockRequeueFailedTask).not.toHaveBeenCalled();
     });
   });
 });

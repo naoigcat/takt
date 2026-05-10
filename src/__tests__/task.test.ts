@@ -3,7 +3,8 @@ import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node
 import { join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { TaskRunner } from '../infra/task/runner.js';
-import { TaskRecordSchema } from '../infra/task/schema.js';
+import { TaskRecordSchema, type TaskRecord } from '../infra/task/schema.js';
+import { buildTerminalTaskRecord } from '../infra/task/taskRecordMutations.js';
 
 function loadTasksFile(testDir: string): { tasks: Array<Record<string, unknown>> } {
   const raw = readFileSync(join(testDir, '.takt', 'tasks.yaml'), 'utf-8');
@@ -76,6 +77,45 @@ describe('TaskRunner (tasks.yaml)', () => {
     const task = runner.addTask('Fix login flow', { workflow: 'default' });
     expect(task.name).toContain('fix-login-flow');
     expect(existsSync(join(testDir, '.takt', 'tasks.yaml'))).toBe(true);
+  });
+
+  it('should clear retry metadata without mutating the source task record', () => {
+    const resumePoint = {
+      version: 1 as const,
+      stack: [
+        { workflow: 'default', step: 'review', kind: 'agent' as const },
+      ],
+      iteration: 3,
+      elapsed_ms: 1000,
+    };
+    const source = TaskRecordSchema.parse({
+      name: 'task-a',
+      status: 'running',
+      content: 'Do work',
+      workflow: 'default',
+      created_at: '2026-02-09T00:00:00.000Z',
+      started_at: '2026-02-09T00:01:00.000Z',
+      completed_at: null,
+      owner_pid: 123,
+      start_step: 'review',
+      resume_point: resumePoint,
+      exceeded_current_iteration: 3,
+      exceeded_max_steps: 5,
+    }) as TaskRecord;
+    const sourceSnapshot = structuredClone(source);
+
+    const updated = buildTerminalTaskRecord(source, {
+      status: 'failed',
+      completed_at: '2026-02-09T00:02:00.000Z',
+      owner_pid: null,
+      failure: { error: 'Boom' },
+    });
+
+    expect(updated.start_step).toBeUndefined();
+    expect(updated.resume_point).toBeUndefined();
+    expect(updated.exceeded_current_iteration).toBeUndefined();
+    expect(updated.exceeded_max_steps).toBeUndefined();
+    expect(source).toEqual(sourceSnapshot);
   });
 
   it('should list only pending tasks', () => {
@@ -559,6 +599,25 @@ describe('TaskRunner (tasks.yaml)', () => {
     expect(file.tasks[0]?.start_step).toBeUndefined();
   });
 
+  it('should persist selected workflow when requeueing task', () => {
+    runner.addTask('Task A', { workflow: 'default' });
+    const task = runner.claimNextTasks(1)[0]!;
+    runner.failTask({
+      task,
+      success: false,
+      response: 'Boom',
+      executionLog: [],
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+    });
+
+    runner.requeueTask(task.name, ['failed'], undefined, 'retry note', undefined, 'selected-workflow');
+
+    const file = loadTasksFile(testDir);
+    expect(file.tasks[0]?.workflow).toBe('selected-workflow');
+    expect(file.tasks[0]?.retry_note).toBe('retry note');
+  });
+
   it('should persist canonical workflow and start_movement keys when starting re-execution', () => {
     runner.addTask('Task A', { workflow: 'default' });
     const task = runner.claimNextTasks(1)[0]!;
@@ -583,6 +642,36 @@ describe('TaskRunner (tasks.yaml)', () => {
     expect(file.tasks[0]?.workflow).toBe('default');
     expect(file.tasks[0]?.start_movement).toBe('implement');
     expect(file.tasks[0]?.start_step).toBeUndefined();
+    expect(file.tasks[0]?.retry_note).toBe('retry note');
+  });
+
+  it('should persist selected workflow when starting re-execution', () => {
+    runner.addTask('Task A', { workflow: 'default' });
+    const task = runner.claimNextTasks(1)[0]!;
+    runner.failTask({
+      task,
+      success: false,
+      response: 'Boom',
+      executionLog: [],
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+    });
+
+    const restarted = runner.startReExecution(
+      task.name,
+      ['failed'],
+      undefined,
+      'retry note',
+      undefined,
+      'selected-workflow',
+    );
+
+    expect(restarted.status).toBe('running');
+    expect(restarted.data?.workflow).toBe('selected-workflow');
+
+    const file = loadTasksFile(testDir);
+    expect(file.tasks[0]?.status).toBe('running');
+    expect(file.tasks[0]?.workflow).toBe('selected-workflow');
     expect(file.tasks[0]?.retry_note).toBe('retry note');
   });
 

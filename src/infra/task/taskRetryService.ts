@@ -6,6 +6,14 @@ import { toTaskInfo } from './mapper.js';
 import { TaskStore } from './store.js';
 import { buildRetryTaskRecord, normalizeTaskRef } from './taskRecordMutations.js';
 
+function replaceTaskAtIndex(
+  tasks: readonly TaskRecord[],
+  index: number,
+  updated: TaskRecord,
+): TaskRecord[] {
+  return tasks.map((task, taskIndex) => (taskIndex === index ? updated : task));
+}
+
 export class TaskRetryService {
   constructor(
     private readonly projectDir: string,
@@ -23,6 +31,7 @@ export class TaskRetryService {
     startStep?: string,
     retryNote?: string,
     resumePoint?: WorkflowResumePoint,
+    workflow?: string,
   ): TaskInfo {
     const taskName = normalizeTaskRef(taskRef);
     let found: TaskRecord | undefined;
@@ -38,12 +47,10 @@ export class TaskRetryService {
       }
 
       const target = current.tasks[index]!;
-      const updated = buildRetryTaskRecord(target, 'running', startStep, retryNote, resumePoint);
+      const updated = buildRetryTaskRecord(target, 'running', startStep, retryNote, resumePoint, workflow);
 
       found = updated;
-      const tasks = [...current.tasks];
-      tasks[index] = updated;
-      return { tasks };
+      return { tasks: replaceTaskAtIndex(current.tasks, index, updated) };
     });
 
     return toTaskInfo(this.projectDir, this.tasksFile, found!);
@@ -55,6 +62,7 @@ export class TaskRetryService {
     startStep?: string,
     retryNote?: string,
     resumePoint?: WorkflowResumePoint,
+    workflow?: string,
   ): string {
     const taskName = normalizeTaskRef(taskRef);
 
@@ -69,11 +77,9 @@ export class TaskRetryService {
       }
 
       const target = current.tasks[index]!;
-      const updated = buildRetryTaskRecord(target, 'pending', startStep, retryNote, resumePoint);
+      const updated = buildRetryTaskRecord(target, 'pending', startStep, retryNote, resumePoint, workflow);
 
-      const tasks = [...current.tasks];
-      tasks[index] = updated;
-      return { tasks };
+      return { tasks: replaceTaskAtIndex(current.tasks, index, updated) };
     });
 
     return this.tasksFile;
