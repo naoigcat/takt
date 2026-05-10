@@ -60,7 +60,7 @@ Organized by category.
 | | `e2e-test` | E2E test focused workflow: E2E analysis -> E2E implementation -> review -> fix (Vitest-based E2E flow). |
 | 🎵 TAKT Development | `takt-default` | TAKT development workflow: plan → write tests → implement → AI antipattern review → 5-parallel review → fix → supervise → complete. |
 | | `takt-default-refresh-all` | All-step `session: refresh` comparison variant of the TAKT development workflow, intended to isolate conversation carry-over effects in Codex/Claude runs. |
-| | `takt-default-refresh-fast` | Refresh-optimized variant of the TAKT development workflow. Keeps reasoning effort and loop rules unchanged, and adds `session: refresh` only to context-heavy steps such as `write_tests`, `ai_review`, reviewer steps, and `fix`. |
+| | `takt-default-refresh-fast` | Refresh-optimized variant of the TAKT development workflow. Keeps reasoning effort and loop rules unchanged, and adds `session: refresh` only to context-heavy steps such as `write_tests`, `ai-antipattern-review-1st`, reviewer steps, and `fix`. |
 | | `takt-default-team-leader` | TAKT development workflow with team leader: plan → write tests → team-leader implement → AI antipattern review → 5-parallel review → fix → supervise → complete. |
 | | `review-fix-takt-default` | TAKT development code review + fix loop (5 parallel reviewers: architecture, security, QA, testing, requirements — with iterative fixes). |
 | Others | `research` | Research workflow: planner -> digger -> supervisor. Autonomously executes research without asking questions. |

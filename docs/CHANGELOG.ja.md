@@ -6,6 +6,29 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.40.0] - 2026-05-10
+
+### Added
+
+- `takt list` の failed タスクに `Requeue` アクションを追加 (#435)。これまで failed タスクの選択肢は会話モード必須の `Retry` と `Delete` のみで、別タスクに集中している間にサクッと再実行キューへ戻す手段がなかった。`Requeue` は会話を経由せず直接 pending に戻すため、原因分析が不要なケースを最短で再投入できる。`retry_note` は失敗 step 名 / エラー要約 / 「ユーザーが対処済みと判断したため再投入」というコンテキストから自動生成し、再実行時のエージェントが `## 再投入メモ` で読み取れる。既存の `retry_note` は上書きせず累積追記する
+- AI アンチパターンレビューを reviewers サイクル毎に実行するように追加。`default` / `default-mini` / `default-high` / `backend` / `backend-cqrs` / `dual` / `dual-cqrs` / `frontend` / `terraform` / `takt-default` の reviewers parallel ステップに `ai-antipattern-review-2nd` を追加し、`fix` 後に混入した過剰防御や幽霊コメントを毎サイクルで検出するようになった。split 構成（`backend` / `dual` / `frontend` 系）では `reviewers_1` のみに配置している（`fix` は常に `reviewers_1` に戻るため）
+
+### Changed
+
+- **BREAKING:** AI アンチパターン系ファセットの命名を `ai-antipattern-*` に統一し、1st / 2nd で分離。`ai_review` (standalone) -> `ai-antipattern-review-1st`、`ai_review` (parallel sub-step) -> `ai-antipattern-review-2nd`、`ai_fix` / `ai_no_fix` -> `ai-antipattern-fix` / `ai-antipattern-no-fix`、`ai_fix_parallel` -> `ai-antipattern-fix-parallel` にリネーム。`review-ai.md` は `ai-antipattern-review.md` に統合して削除。`loop-monitor-ai-fix.md` も `loop-monitor-ai-antipattern-fix.md` にリネーム。これらの step 名 / instruction / report format を参照しているカスタムワークフローは追従更新が必要
+- レビューポリシーで CHANGELOG / RELEASE_NOTES / MIGRATION を「過去時点の記録」として扱うよう変更 (#710)。リネームや仕様変更後に過去エントリの設定キー・API 名が現行コードと一致しないことだけを根拠にレビュアーが REJECT する挙動を抑制した。新規追加エントリの対象リリース時点での事実誤認や Markdown 崩れ・重複・リンク切れは引き続き REJECT 可。判別はファイル名（`CHANGELOG.md` 等）または慣用的見出し（`### Changed` / `### Added` / リリース日付つき見出し）で行う
+- `default` / `default-mini` / `default-high` / `takt-default` ワークフローを subworkflow ベースに再編。default 系は `default-draft` / `default-peer-review`、takt-default 系は `draft` / `peer-review` を共有する。親ワークフローは `workflow_call` で構成され、subworkflow は `params`（`impl_knowledge` / `fix_knowledge` / `arch_knowledge` 等）で各親の knowledge facet を差し替えられる。subworkflow は `visibility: internal` でワークフロー選択 UI から見えない。ユーザーから見た挙動は同一
+- quiet / passthrough モードに専用イントロ表示を導入 (#593)。これまで両モードでも `/go` / `/cancel` 等の slash command を案内するアシスタントモード共通のイントロが表示されていたが、これらのモードでは実際にはそれらのコマンドが解釈されず誤誘導になっていた。quiet モードは `interactive.ui.introQuiet`、passthrough モードは `interactive.ui.introPassthrough` を表示するように変更し、英日両方の i18n ラベルを追加した
+- `auto-improvement-loop` の structured output schema を Codex 互換に強化。`followup-task` で `task_markdown` / `issue` を required に、`pr-followup-task` で `task_markdown` を required に変更。各 action でこれらのフィールドをどう埋めるか（`wait_before_next_scan` / `prepare_merge` / `reject_pr` では空文字列、`enqueue_new_task` 等では実体を埋める）を planning instruction で明示するようにした。Codex provider が部分的な `agent_message` を返した場合に schema 側で弾けるようになった
+
+### Fixed
+
+- Codex provider の structured output 抽出を、連結済み stream content ではなく最後の `agent_message` text ベースに変更 (#707)。Codex セッションが `agent_message` を複数回出すケース（途中 JSON 草案の後に最終応答が来るパターン）で、従来実装は全 text を連結して 1 個の JSON object として parse しようとし、JSONL のような形になって `Structured output response is missing` で abort していた。`outputSchema` 指定時は最後の `agent_message.text` を独立して parse するよう変更し、途中の古い JSON を誤採用せず `auto-improvement-loop` が abort しなくなった
+
+### Internal
+
+- CI: `takt-review` ワークフローに `concurrency.cancel-in-progress: true` を追加し、同一 PR への新規 commit 時に古いレビュー実行をキャンセルするようにした。古いリビジョンに対する無駄なレビュアー実行が走らなくなる
+
 ## [0.39.0] - 2026-05-02
 
 ### Added

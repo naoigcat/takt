@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.40.0] - 2026-05-10
+
+### Added
+
+- `takt list` failed-task action `Requeue` added (#435). Previously the only options were `Retry` (always conversation-driven) and `Delete`. `Requeue` directly returns the task to the pending queue without entering a conversation, useful for quickly resending a failed task while working on something else. The `retry_note` is auto-generated from the failure context (failed step name + error excerpt + a hint that the user has acknowledged the issue), so the next run still receives `## Requeue Notes` context. Existing `retry_note` values are accumulated rather than overwritten
+- AI antipattern review now runs on every reviewers cycle. Added `ai-antipattern-review-2nd` to the parallel reviewers step in `default` / `default-mini` / `default-high` / `backend` / `backend-cqrs` / `dual` / `dual-cqrs` / `frontend` / `terraform` / `takt-default`, so over-defensive code or ghost comments introduced by a `fix` pass are caught on every review pass instead of only the initial one. Split workflows (`backend` / `dual` / `frontend` series) place it on `reviewers_1` only, since `fix` always returns to `reviewers_1`
+
+### Changed
+
+- **BREAKING:** AI antipattern review/fix facet names unified under `ai-antipattern-*` and split into 1st/2nd. `ai_review` (standalone) -> `ai-antipattern-review-1st`, `ai_review` (parallel sub-step) -> `ai-antipattern-review-2nd`, `ai_fix` / `ai_no_fix` -> `ai-antipattern-fix` / `ai-antipattern-no-fix`, `ai_fix_parallel` -> `ai-antipattern-fix-parallel`. `review-ai.md` is consolidated into `ai-antipattern-review.md` and removed. `loop-monitor-ai-fix.md` is renamed to `loop-monitor-ai-antipattern-fix.md`. Custom workflows that referenced any of these step names, instruction files, or report formats need to be updated
+- Review policy treats CHANGELOG / RELEASE_NOTES / MIGRATION as point-in-time history (#710). Reviewers no longer REJECT past entries solely because their config keys, API names, or behaviors no longer match current code. Reviewers can still REJECT factual errors in newly added entries (relative to the target release) and Markdown / formatting issues. Targets are identified by file name (`CHANGELOG.md`, etc.) or conventional headings (`### Changed` / `### Added` / dated release headings)
+- `default` / `default-mini` / `default-high` / `takt-default` workflows refactored to share two internal subworkflows: `default-draft` / `default-peer-review` (default series) and `draft` / `peer-review` (takt-default series). The four parent workflows are now `workflow_call`-based shells, and the subworkflows expose `params` (e.g. `impl_knowledge`, `fix_knowledge`, `arch_knowledge`) so each parent injects its own knowledge facets without duplicating step definitions. The subworkflows are `visibility: internal` and not selectable from the workflow UI. Observable behavior is unchanged
+- Quiet / Passthrough mode show mode-specific intros (#593). Previously both modes printed the assistant-mode intro listing slash commands like `/go` / `/cancel` that those modes do not actually parse. Quiet mode now prints `interactive.ui.introQuiet` and Passthrough mode prints `interactive.ui.introPassthrough`, both English and Japanese, so the displayed instructions match what the mode actually does
+- `auto-improvement-loop` structured-output schemas tightened for Codex compatibility. `task_markdown` and `issue` are now required on `followup-task`, and `task_markdown` is required on `pr-followup-task`. The planning instruction prompts now explicitly state how to populate these fields for each action (e.g. empty string for `wait_before_next_scan` / `prepare_merge` / `reject_pr`). Previously a Codex provider could produce a partial `agent_message` without these fields and the parent workflow had no schema enforcement
+
+### Fixed
+
+- Codex provider structured output extraction uses the final `agent_message` text instead of the concatenated stream content (#707). When a Codex session emitted multiple `agent_message` text events (typical when intermediate JSON drafts precede the final answer), the previous implementation concatenated all of them and tried to parse the resulting JSONL-like blob as a single JSON object, causing `Structured output response is missing` aborts on workflows like `auto-improvement-loop`. The last `agent_message.text` is now parsed independently when an `outputSchema` is configured, so older intermediate drafts are not incorrectly adopted and the run no longer aborts
+
+### Internal
+
+- CI: `takt-review` workflow now cancels stale runs when a new commit lands on the same PR (`concurrency.cancel-in-progress: true`), avoiding wasted reviewer runs against an outdated revision
+
 ## [0.39.0] - 2026-05-02
 
 ### Added
