@@ -907,8 +907,8 @@ describe('Workflow Loader IT: rule syntax parsing', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('should parse all() multi-condition aggregate from the default workflow', () => {
-    const config = loadWorkflowConfig('default', testDir);
+  it('should parse all() multi-condition aggregate from the default-peer-review workflow', () => {
+    const config = loadWorkflowConfig('default-peer-review', testDir);
     expect(config).not.toBeNull();
 
     // Find the parallel reviewers step
@@ -927,8 +927,8 @@ describe('Workflow Loader IT: rule syntax parsing', () => {
     expect((allRule!.aggregateConditionText as string[])[0]).toBe('approved');
   });
 
-  it('should parse any() multi-condition aggregate from the default workflow', () => {
-    const config = loadWorkflowConfig('default', testDir);
+  it('should parse any() multi-condition aggregate from the default-peer-review workflow', () => {
+    const config = loadWorkflowConfig('default-peer-review', testDir);
     expect(config).not.toBeNull();
 
     const reviewersStep = config!.steps.find(
@@ -945,7 +945,7 @@ describe('Workflow Loader IT: rule syntax parsing', () => {
   });
 
   it('should parse standard rules with next step', () => {
-    const config = loadWorkflowConfig('default', testDir);
+    const config = loadWorkflowConfig('default-draft', testDir);
     expect(config).not.toBeNull();
 
     const implementStep = config!.steps.find((s) => s.name === 'implement');
@@ -1035,8 +1035,8 @@ describe('Workflow Loader IT: parallel step loading', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('should load parallel sub-steps from default workflow', () => {
-    const config = loadWorkflowConfig('default', testDir);
+  it('should load parallel sub-steps from default-peer-review workflow', () => {
+    const config = loadWorkflowConfig('default-peer-review', testDir);
     expect(config).not.toBeNull();
 
     const parallelStep = config!.steps.find(

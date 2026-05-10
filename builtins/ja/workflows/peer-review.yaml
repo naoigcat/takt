@@ -5,6 +5,13 @@ subworkflow:
   visibility: internal
   returns:
     - need_replan
+  params:
+    arch_knowledge:
+      type: facet_ref[]
+      facet_kind: knowledge
+      default:
+        - architecture
+        - takt
 workflow_config:
   provider_options:
     codex:
@@ -34,8 +41,7 @@ steps:
         persona: architecture-reviewer
         policy: review
         knowledge:
-          - architecture
-          - takt
+          $param: arch_knowledge
         provider_options:
           claude:
             allowed_tools:

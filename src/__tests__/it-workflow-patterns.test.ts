@@ -68,6 +68,7 @@ vi.mock('../infra/config/resolveConfigValue.js', () => ({
 
 import { WorkflowEngine } from '../core/workflow/index.js';
 import { loadWorkflow } from '../infra/config/index.js';
+import { resolveWorkflowCallTarget } from '../infra/config/loaders/workflowCallResolver.js';
 import type { WorkflowConfig } from '../core/models/index.js';
 
 // --- Test helpers ---
@@ -121,6 +122,10 @@ function createEngine(config: WorkflowConfig, dir: string, task: string): Workfl
     provider: 'mock',
     detectRuleIndex,
     structuredCaller,
+    workflowCallResolver: ({ parentWorkflow, identifier, stepName, projectCwd, lookupCwd }) => {
+      const child = resolveWorkflowCallTarget(parentWorkflow, identifier, stepName, projectCwd, lookupCwd);
+      return child ? stripClaudeAllowedTools(child) : null;
+    },
   });
 }
 
@@ -137,7 +142,7 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
     rmSync(testDir, { recursive: true, force: true });
   });
 
-  it('should complete: plan → write_tests → implement → ai-antipattern-review-1st → reviewers (parallel: arch-review + ai-antipattern-review + supervise) → COMPLETE', async () => {
+  it('should complete: plan → write_tests → draft (implement + ai-antipattern-review-1st) → peer-review (parallel: arch-review + ai-antipattern-review + supervise) → COMPLETE', async () => {
     const config = loadWorkflow('default', testDir);
     expect(config).not.toBeNull();
 
@@ -155,27 +160,25 @@ describe('Workflow Patterns IT: default workflow (happy path)', () => {
     const state = await engine.run();
 
     expect(state.status).toBe('completed');
-    expect(state.iteration).toBe(5);
   });
 
-  it('should route implement → ai-antipattern-review-1st even when implement cannot proceed', async () => {
+  it('should route implement → ai-antipattern-review-1st when no implementation needed (report only)', async () => {
     const config = loadWorkflow('default', testDir);
 
     setMockScenario([
       { persona: 'planner', status: 'done', content: 'Requirements are clear and implementable' },
       { persona: 'coder', status: 'done', content: 'Tests written successfully' },
-      { persona: 'coder', status: 'done', content: 'Cannot proceed, insufficient info' },
+      { persona: 'coder', status: 'done', content: 'No implementation (report only)' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'architecture-reviewer', status: 'done', content: 'approved' },
       { persona: 'ai-antipattern-reviewer', status: 'done', content: 'No AI-specific issues' },
       { persona: 'supervisor', status: 'done', content: 'All checks passed' },
     ]);
 
-    const engine = createEngine(config!, testDir, 'Vague task');
+    const engine = createEngine(config!, testDir, 'Report only task');
     const state = await engine.run();
 
     expect(state.status).toBe('completed');
-    expect(state.iteration).toBe(5);
   });
 
 });

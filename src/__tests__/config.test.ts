@@ -142,9 +142,9 @@ steps:
   });
 });
 
-describe('default workflow parallel reviewers step', () => {
+describe('default-peer-review workflow parallel reviewers step', () => {
   it('should have a reviewers step with parallel sub-steps', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     expect(workflow).not.toBeNull();
 
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers');
@@ -154,7 +154,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have arch-review and supervise as parallel sub-steps', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
     const subStepNames = reviewersStep.parallel!.map((s) => s.name);
 
@@ -163,7 +163,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have multi-condition aggregate rules on the reviewers parent step', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
 
     expect(reviewersStep.rules).toBeDefined();
@@ -185,7 +185,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have arch-review sub-step with approved/needs_fix conditions', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
 
     const archReview = reviewersStep.parallel!.find((s) => s.name === 'arch-review')!;
@@ -196,7 +196,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have supervise sub-step with 2 conditions', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
 
     const supervise = reviewersStep.parallel!.find((s) => s.name === 'supervise')!;
@@ -204,16 +204,16 @@ describe('default workflow parallel reviewers step', () => {
     expect(supervise.rules).toHaveLength(2);
   });
 
-  it('should have ai-antipattern-review-1st transitioning to reviewers step', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+  it('should have ai-antipattern-review-1st (in default-draft) transitioning to COMPLETE on approval', () => {
+    const workflow = getBuiltinWorkflow('default-draft', process.cwd());
     const aiReviewStep = workflow!.steps.find((s) => s.name === 'ai-antipattern-review-1st')!;
 
-    const approveRule = aiReviewStep.rules!.find((r) => r.next === 'reviewers');
+    const approveRule = aiReviewStep.rules!.find((r) => r.next === 'COMPLETE');
     expect(approveRule).toBeDefined();
   });
 
-  it('should have ai-antipattern-fix transitioning to ai-antipattern-review-1st step', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+  it('should have ai-antipattern-fix (in default-draft) transitioning to ai-antipattern-review-1st step', () => {
+    const workflow = getBuiltinWorkflow('default-draft', process.cwd());
     const aiFixStep = workflow!.steps.find((s) => s.name === 'ai-antipattern-fix')!;
 
     const fixedRule = aiFixStep.rules!.find((r) => r.next === 'ai-antipattern-review-1st');
@@ -221,7 +221,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have fix step transitioning back to reviewers', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const fixStep = workflow!.steps.find((s) => s.name === 'fix')!;
 
     const fixedRule = fixStep.rules!.find((r) => r.next === 'reviewers');
@@ -229,7 +229,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should not have old separate review/security_review/improve steps', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const stepNames = workflow!.steps.map((s) => s.name);
 
     expect(stepNames).not.toContain('review');
@@ -239,7 +239,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have sub-steps with correct agents', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
 
     const archReview = reviewersStep.parallel!.find((s) => s.name === 'arch-review')!;
@@ -250,7 +250,7 @@ describe('default workflow parallel reviewers step', () => {
   });
 
   it('should have output contracts configured on sub-steps', () => {
-    const workflow = getBuiltinWorkflow('default', process.cwd());
+    const workflow = getBuiltinWorkflow('default-peer-review', process.cwd());
     const reviewersStep = workflow!.steps.find((s) => s.name === 'reviewers')!;
 
     const archReview = reviewersStep.parallel!.find((s) => s.name === 'arch-review')!;

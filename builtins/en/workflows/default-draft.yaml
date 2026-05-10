@@ -1,24 +1,15 @@
-name: draft
-description: takt-default の Phase 1。実装 → AI アンチパターン自己レビュー ⇄ 修正 ループ。
+name: default-draft
+description: default series Phase 1. Implement -> AI-antipattern self-review ⇄ fix loop.
 subworkflow:
   callable: true
   visibility: internal
   returns:
     - need_replan
   params:
-    impl_knowledge:
-      type: facet_ref[]
-      facet_kind: knowledge
-      default:
-        - takt
-        - architecture
-        - task-decomposition
-    fix_knowledge:
-      type: facet_ref[]
-      facet_kind: knowledge
-      default:
-        - takt
-        - architecture
+    impl_instruction:
+      type: facet_ref
+      facet_kind: instruction
+      default: implement
 workflow_config:
   provider_options:
     codex:
@@ -31,14 +22,14 @@ loop_monitors:
   - cycle:
       - ai-antipattern-review-1st
       - ai-antipattern-fix
-    threshold: 5
+    threshold: 3
     judge:
       persona: supervisor
       instruction: loop-monitor-ai-antipattern-fix
       rules:
-        - condition: 健全（進捗あり）
+        - condition: Healthy (making progress)
           next: ai-antipattern-review-1st
-        - condition: 非生産的（改善なし）
+        - condition: Unproductive (no improvement)
           next: COMPLETE
 steps:
   - name: implement
@@ -49,7 +40,7 @@ steps:
       - testing
     session: refresh
     knowledge:
-      $param: impl_knowledge
+      - architecture
     provider_options:
       claude:
         allowed_tools:
@@ -62,29 +53,16 @@ steps:
           - WebSearch
           - WebFetch
     required_permission_mode: edit
-    team_leader:
-      max_parts: 2
-      part_persona: coder
-      part_edit: true
-      part_permission_mode: edit
-      part_allowed_tools:
-        - Read
-        - Glob
-        - Grep
-        - Edit
-        - Write
-        - Bash
-        - WebSearch
-        - WebFetch
-    instruction: team-leader-implement
+    instruction:
+      $param: impl_instruction
     rules:
-      - condition: 実装完了
+      - condition: Implementation complete
         next: ai-antipattern-review-1st
-      - condition: 実装未着手（レポートのみ）
+      - condition: No implementation (report only)
         next: ai-antipattern-review-1st
-      - condition: 判断できない、情報不足
+      - condition: Cannot proceed, insufficient info
         return: need_replan
-      - condition: ユーザー入力が必要
+      - condition: User input required
         next: implement
         requires_user_input: true
         interactive_only: true
@@ -108,12 +86,12 @@ steps:
           - Grep
           - WebSearch
           - WebFetch
-    rules:
-      - condition: AI特有の問題なし
-        next: COMPLETE
-      - condition: AI特有の問題あり
-        next: ai-antipattern-fix
     instruction: ai-antipattern-review
+    rules:
+      - condition: No AI-specific issues
+        next: COMPLETE
+      - condition: AI-specific issues found
+        next: ai-antipattern-fix
     output_contracts:
       report:
         - name: ai-antipattern-review.md
@@ -126,7 +104,7 @@ steps:
       - testing
     session: refresh
     knowledge:
-      $param: fix_knowledge
+      - architecture
     provider_options:
       claude:
         allowed_tools:
@@ -139,28 +117,12 @@ steps:
           - WebSearch
           - WebFetch
     required_permission_mode: edit
+    instruction: ai-antipattern-fix
     pass_previous_response: false
     rules:
-      - condition: AI問題の修正完了
+      - condition: AI issues fixed
         next: ai-antipattern-review-1st
-      - condition: 修正不要（指摘対象ファイル/仕様の確認済み）
-        next: ai-antipattern-no-fix
-      - condition: 判断できない、情報不足
-        next: ai-antipattern-no-fix
-    instruction: ai-antipattern-fix
-  - name: ai-antipattern-no-fix
-    edit: false
-    persona: architecture-reviewer
-    policy: review
-    provider_options:
-      claude:
-        allowed_tools:
-          - Read
-          - Glob
-          - Grep
-    rules:
-      - condition: ai-antipattern-review-1stの指摘が妥当（修正すべき）
-        next: ai-antipattern-fix
-      - condition: ai-antipattern-fixの判断が妥当（修正不要）
+      - condition: No fix needed (verified target files/spec)
         next: COMPLETE
-    instruction: arbitrate
+      - condition: Cannot proceed with fixes
+        next: COMPLETE

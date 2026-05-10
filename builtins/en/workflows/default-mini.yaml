@@ -1,5 +1,5 @@
 name: default-mini
-description: Mini development workflow without tests (plan → implement → AI antipattern review → parallel review → complete)
+description: Mini development workflow without tests (plan -> draft (implement + AI self-review) -> peer-review (3 parallel) -> COMPLETE).
 workflow_config:
   provider_options:
     codex:
@@ -8,43 +8,6 @@ workflow_config:
       network_access: true
 max_steps: 30
 initial_step: plan
-loop_monitors:
-  - cycle:
-      - ai-antipattern-review-1st
-      - ai-antipattern-fix
-    threshold: 3
-    judge:
-      persona: supervisor
-      instruction: |
-        The ai-antipattern-review-1st ↔ ai-antipattern-fix loop has repeated {cycle_count} times.
-
-        Review the reports from each cycle and determine whether this loop
-        is healthy (making progress) or unproductive (repeating the same issues).
-
-        **Reports to reference:**
-        - AI Review results: {report:ai-antipattern-review.md}
-
-        **Judgment criteria:**
-        - Are new issues being found/fixed in each cycle?
-        - Are the same findings being repeated?
-        - Are fixes actually being applied?
-      rules:
-        - condition: Healthy (making progress)
-          next: ai-antipattern-review-1st
-        - condition: Unproductive (no improvement)
-          next: reviewers
-  - cycle:
-      - reviewers
-      - fix
-    threshold: 3
-    judge:
-      persona: supervisor
-      instruction: loop-monitor-reviewers-fix
-      rules:
-        - condition: converging (findings decreasing, fixes applied)
-          next: reviewers
-        - condition: unproductive (same findings repeating)
-          next: ABORT
 steps:
   - name: plan
     edit: false
@@ -61,7 +24,7 @@ steps:
           - WebFetch
     rules:
       - condition: Requirements are clear and implementable
-        next: implement
+        next: draft
       - condition: User is asking a question (not an implementation task)
         next: COMPLETE
       - condition: Requirements unclear, insufficient info
@@ -75,194 +38,23 @@ steps:
       report:
         - name: plan.md
           format: plan
-  - name: implement
-    edit: true
-    persona: coder
-    policy:
-      - coding
-      - testing
-    knowledge:
-      - architecture
-    provider_options:
-      claude:
-        allowed_tools:
-          - Read
-          - Glob
-          - Grep
-          - Edit
-          - Write
-          - Bash
-          - WebSearch
-          - WebFetch
-    required_permission_mode: edit
-    instruction: implement
+  - name: draft
+    kind: workflow_call
+    call: default-draft
     rules:
-      - condition: Implementation complete
-        next: ai-antipattern-review-1st
-      - condition: Cannot proceed with implementation
-        next: ABORT
-      - condition: User input required
-        next: implement
-        requires_user_input: true
-        interactive_only: true
-    output_contracts:
-      report:
-        - name: coder-scope.md
-          format: coder-scope
-        - name: coder-decisions.md
-          format: coder-decisions
-  - name: ai-antipattern-review-1st
-    edit: false
-    persona: ai-antipattern-reviewer
-    policy:
-      - review
-      - ai-antipattern
-    provider_options:
-      claude:
-        allowed_tools:
-          - Read
-          - Glob
-          - Grep
-          - WebSearch
-          - WebFetch
-    instruction: ai-antipattern-review
-    rules:
-      - condition: No AI-specific issues
-        next: reviewers
-      - condition: AI-specific issues found
-        next: ai-antipattern-fix
-    output_contracts:
-      report:
-        - name: ai-antipattern-review.md
-          format: ai-antipattern-review
-  - name: ai-antipattern-fix
-    edit: true
-    persona: coder
-    policy:
-      - coding
-      - testing
-    session: refresh
-    knowledge:
-      - architecture
-    provider_options:
-      claude:
-        allowed_tools:
-          - Read
-          - Glob
-          - Grep
-          - Edit
-          - Write
-          - Bash
-          - WebSearch
-          - WebFetch
-    required_permission_mode: edit
-    instruction: ai-antipattern-fix
-    pass_previous_response: false
-    rules:
-      - condition: AI issues fixed
-        next: ai-antipattern-review-1st
-      - condition: No fix needed (verified target files/spec)
-        next: reviewers
-      - condition: Cannot proceed with fixes
-        next: reviewers
-  - name: reviewers
-    parallel:
-      - name: arch-review
-        edit: false
-        persona: architecture-reviewer
-        policy: review
-        knowledge: architecture
-        provider_options:
-          claude:
-            allowed_tools:
-              - Read
-              - Glob
-              - Grep
-              - WebSearch
-              - WebFetch
-        rules:
-          - condition: approved
-          - condition: needs_fix
-        instruction: review-arch
-        output_contracts:
-          report:
-            - name: architect-review.md
-              format: architecture-review
-      - name: ai-antipattern-review-2nd
-        edit: false
-        persona: ai-antipattern-reviewer
-        policy:
-          - review
-          - ai-antipattern
-        provider_options:
-          claude:
-            allowed_tools:
-              - Read
-              - Glob
-              - Grep
-              - WebSearch
-              - WebFetch
-        instruction: ai-antipattern-review
-        rules:
-          - condition: No AI-specific issues
-          - condition: AI-specific issues found
-        output_contracts:
-          report:
-            - name: ai-antipattern-review.md
-              format: ai-antipattern-review
-      - name: supervise
-        edit: false
-        persona: supervisor
-        policy: review
-        provider_options:
-          claude:
-            allowed_tools:
-              - Read
-              - Glob
-              - Grep
-              - Bash
-              - WebSearch
-              - WebFetch
-        instruction: supervise
-        rules:
-          - condition: All checks passed
-          - condition: Requirements unmet, tests failing, build errors
-        output_contracts:
-          report:
-            - name: supervisor-validation.md
-              format: supervisor-validation
-            - name: summary.md
-              format: summary
-              use_judge: false
-    rules:
-      - condition: all("approved", "No AI-specific issues", "All checks passed")
-        next: COMPLETE
-      - condition: any("needs_fix", "AI-specific issues found", "Requirements unmet, tests failing, build errors")
-        next: fix
-  - name: fix
-    edit: true
-    persona: coder
-    policy:
-      - coding
-      - testing
-    knowledge:
-      - architecture
-    provider_options:
-      claude:
-        allowed_tools:
-          - Read
-          - Glob
-          - Grep
-          - Edit
-          - Write
-          - Bash
-          - WebSearch
-          - WebFetch
-    required_permission_mode: edit
-    instruction: fix
-    pass_previous_response: false
-    rules:
-      - condition: Fix complete
-        next: reviewers
-      - condition: Cannot proceed, insufficient info
+      - condition: COMPLETE
+        next: peer-review
+      - condition: need_replan
         next: plan
+      - condition: ABORT
+        next: ABORT
+  - name: peer-review
+    kind: workflow_call
+    call: default-peer-review
+    rules:
+      - condition: COMPLETE
+        next: COMPLETE
+      - condition: need_replan
+        next: plan
+      - condition: ABORT
+        next: ABORT

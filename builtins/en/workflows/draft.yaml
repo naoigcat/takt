@@ -5,6 +5,20 @@ subworkflow:
   visibility: internal
   returns:
     - need_replan
+  params:
+    impl_knowledge:
+      type: facet_ref[]
+      facet_kind: knowledge
+      default:
+        - takt
+        - architecture
+        - task-decomposition
+    fix_knowledge:
+      type: facet_ref[]
+      facet_kind: knowledge
+      default:
+        - takt
+        - architecture
 workflow_config:
   provider_options:
     codex:
@@ -35,9 +49,7 @@ steps:
       - testing
     session: refresh
     knowledge:
-      - takt
-      - architecture
-      - task-decomposition
+      $param: impl_knowledge
     provider_options:
       claude:
         allowed_tools:
@@ -114,8 +126,7 @@ steps:
       - testing
     session: refresh
     knowledge:
-      - takt
-      - architecture
+      $param: fix_knowledge
     provider_options:
       claude:
         allowed_tools:
