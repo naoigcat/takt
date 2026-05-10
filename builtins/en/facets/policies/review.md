@@ -150,6 +150,25 @@ Test file length and duplication are warning-level maintainability concerns by d
   - inability to detect regressions
 - "Too long" or "duplicated" alone is not sufficient for `REJECT`
 
+## Handling Changelog and History Files
+
+Files or sections that record point-in-time facts (e.g., `CHANGELOG.md`, `RELEASE_NOTES.md`, `MIGRATION.md`) are history, not specifications of the current code. Judge them by their correctness as history.
+
+| Target | Judgment |
+|--------|----------|
+| Past entry's config keys, API names, or behaviors do not match current code | REJECT prohibited |
+| Records that were correct at the time of the relevant release | Modification requests prohibited |
+| Factual errors in newly added entries (relative to the target release) | REJECT allowed |
+| Markdown formatting issues, duplication, broken links, obvious typos | REJECT or Warning allowed |
+
+### Judgment Criteria
+
+- History records "what changed at that point in time," not "how the system currently works"
+- Even if names or behaviors have been changed in current code, that is not grounds to rewrite past entries
+- To request modification of a past entry, demonstrate that it was incorrect even at the relevant release point
+- Identify history files/sections by file name (`CHANGELOG.md`, etc.) or conventional headings (`### Changed`, `### Added`, dated release headings)
+- Do not REJECT a history file or section based solely on disagreement with current schema or current config keys
+
 ## Boy Scout Rule
 
 Leave it better than you found it.
