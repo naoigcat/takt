@@ -123,8 +123,9 @@ export class TaskRunner {
     startStep?: string,
     retryNote?: string,
     resumePoint?: WorkflowResumePoint,
+    workflow?: string,
   ): string {
-    return this.retry.requeueTask(taskRef, allowedStatuses, startStep, retryNote, resumePoint);
+    return this.retry.requeueTask(taskRef, allowedStatuses, startStep, retryNote, resumePoint, workflow);
   }
 
   startReExecution(
@@ -133,8 +134,9 @@ export class TaskRunner {
     startStep?: string,
     retryNote?: string,
     resumePoint?: WorkflowResumePoint,
+    workflow?: string,
   ): TaskInfo {
-    return this.retry.startReExecution(taskRef, allowedStatuses, startStep, retryNote, resumePoint);
+    return this.retry.startReExecution(taskRef, allowedStatuses, startStep, retryNote, resumePoint, workflow);
   }
 
   deleteTask(name: string, kind: 'pending' | 'failed' | 'completed' | 'exceeded' | 'pr_failed'): void {

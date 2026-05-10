@@ -7,9 +7,11 @@ const {
   mockExecuteAndCompleteTask,
   mockRunInstructMode,
   mockDispatchConversationAction,
+  mockExecFileSync,
   mockSelectWorkflow,
   mockConfirm,
   mockGetLabel,
+  mockGetWorkflowDescription,
   mockResolveLanguage,
   mockListRecentRuns,
   mockSelectRun,
@@ -18,6 +20,7 @@ const {
   mockFindPreviousOrderContent,
   mockWarn,
   mockIsWorkflowPath,
+  mockLoadWorkflowByIdentifier,
   mockLoadAllStandaloneWorkflowsWithSources,
 } = vi.hoisted(() => ({
   mockExistsSync: vi.fn(() => true),
@@ -26,9 +29,16 @@ const {
   mockExecuteAndCompleteTask: vi.fn(),
   mockRunInstructMode: vi.fn(),
   mockDispatchConversationAction: vi.fn(),
+  mockExecFileSync: vi.fn(() => ''),
   mockSelectWorkflow: vi.fn(),
   mockConfirm: vi.fn(),
   mockGetLabel: vi.fn(),
+  mockGetWorkflowDescription: vi.fn(() => ({
+    name: 'default',
+    description: 'desc',
+    workflowStructure: [],
+    stepPreviews: [],
+  })),
   mockResolveLanguage: vi.fn(() => 'en'),
   mockListRecentRuns: vi.fn(() => []),
   mockSelectRun: vi.fn(() => null),
@@ -37,6 +47,7 @@ const {
   mockFindPreviousOrderContent: vi.fn(() => null),
   mockWarn: vi.fn(),
   mockIsWorkflowPath: vi.fn(() => false),
+  mockLoadWorkflowByIdentifier: vi.fn(() => ({ name: 'path-workflow' })),
   mockLoadAllStandaloneWorkflowsWithSources: vi.fn(() => new Map<string, unknown>([
     ['default', {}],
     ['selected-workflow', {}],
@@ -46,6 +57,11 @@ const {
 vi.mock('node:fs', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
+}));
+
+vi.mock('node:child_process', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  execFileSync: (...args: unknown[]) => mockExecFileSync(...args),
 }));
 
 vi.mock('../infra/task/index.js', () => ({
@@ -62,13 +78,9 @@ vi.mock('../infra/task/index.js', () => ({
 
 vi.mock('../infra/config/index.js', () => ({
   resolveWorkflowConfigValues: vi.fn(() => ({ interactivePreviewSteps: 3, language: 'en' })),
-  getWorkflowDescription: vi.fn(() => ({
-    name: 'default',
-    description: 'desc',
-    workflowStructure: [],
-    stepPreviews: [],
-  })),
+  getWorkflowDescription: (...args: unknown[]) => mockGetWorkflowDescription(...args),
   isWorkflowPath: (...args: unknown[]) => mockIsWorkflowPath(...args),
+  loadWorkflowByIdentifier: (...args: unknown[]) => mockLoadWorkflowByIdentifier(...args),
   loadAllStandaloneWorkflowsWithSources: (...args: unknown[]) => mockLoadAllStandaloneWorkflowsWithSources(...args),
 }));
 
@@ -133,7 +145,14 @@ describe('instructBranch direct execution flow', () => {
     mockSelectWorkflow.mockResolvedValue('default');
     mockRunInstructMode.mockResolvedValue({ action: 'execute', task: '追加指示A' });
     mockDispatchConversationAction.mockImplementation(async (_result, handlers) => handlers.execute({ task: '追加指示A' }));
+    mockExecFileSync.mockReturnValue('');
     mockConfirm.mockResolvedValue(true);
+    mockGetWorkflowDescription.mockReturnValue({
+      name: 'default',
+      description: 'desc',
+      workflowStructure: [],
+      stepPreviews: [],
+    });
     mockGetLabel.mockImplementation((key: string, _lang?: string, vars?: Record<string, string>) => {
       if (key === 'interactive.runSelector.confirm') {
         return "Reference a previous run's results?";
@@ -149,6 +168,7 @@ describe('instructBranch direct execution flow', () => {
     mockFindRunForTask.mockReturnValue(null);
     mockFindPreviousOrderContent.mockReturnValue(null);
     mockIsWorkflowPath.mockImplementation((workflow: string) => workflow.startsWith('/') || workflow.startsWith('~') || workflow.startsWith('./') || workflow.startsWith('../') || workflow.endsWith('.yaml') || workflow.endsWith('.yml'));
+    mockLoadWorkflowByIdentifier.mockReturnValue({ name: 'path-workflow' });
     mockLoadAllStandaloneWorkflowsWithSources.mockReturnValue(new Map<string, unknown>([
       ['default', {}],
       ['selected-workflow', {}],
@@ -229,6 +249,75 @@ describe('instructBranch direct execution flow', () => {
     expect(mockGetLabel).toHaveBeenCalledWith('retry.usePreviousWorkflowConfirm', 'en', { workflow: 'default' });
     const reuseConfirmCall = mockConfirm.mock.calls.find(([message]) => message === 'retry.usePreviousWorkflowConfirm');
     expect(reuseConfirmCall?.[1] ?? true).toBe(true);
+  });
+
+  it('should resolve reused workflow path descriptions from the worktree lookup root', async () => {
+    const workflowPath = './.takt/workflows/custom.yaml';
+
+    await instructBranch('/project', {
+      kind: 'completed',
+      name: 'done-task',
+      createdAt: '2026-02-14T00:00:00.000Z',
+      filePath: '/project/.takt/tasks.yaml',
+      content: 'done',
+      branch: 'takt/done-task',
+      worktreePath: '/project/.takt/worktrees/done-task',
+      data: { task: 'done', workflow: workflowPath },
+    });
+
+    expect(mockLoadWorkflowByIdentifier).toHaveBeenCalledWith(
+      workflowPath,
+      '/project',
+      { lookupCwd: '/project/.takt/worktrees/done-task' },
+    );
+    expect(mockGetWorkflowDescription).toHaveBeenCalledWith(
+      workflowPath,
+      '/project',
+      3,
+      '/project/.takt/worktrees/done-task',
+    );
+    expect(mockSelectWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('should build branch context from diff and commit sections without dropping either section', async () => {
+    mockExecFileSync
+      .mockReturnValueOnce(' src/index.ts | 2 +-\n 1 file changed')
+      .mockReturnValueOnce('abc123 fix issue');
+
+    await instructBranch('/project', {
+      kind: 'completed',
+      name: 'done-task',
+      createdAt: '2026-02-14T00:00:00.000Z',
+      filePath: '/project/.takt/tasks.yaml',
+      content: 'done',
+      branch: 'takt/done-task',
+      worktreePath: '/project/.takt/worktrees/done-task',
+      data: { task: 'done' },
+    });
+
+    expect(mockRunInstructMode).toHaveBeenCalledWith(
+      '/project/.takt/worktrees/done-task',
+      [
+        '## 現在の変更内容（mainからの差分）',
+        '```',
+        'src/index.ts | 2 +-\n 1 file changed',
+        '```',
+        '',
+        '## コミット履歴',
+        '```',
+        'abc123 fix issue',
+        '```',
+        '',
+        '',
+      ].join('\n'),
+      'takt/done-task',
+      'done-task',
+      'done',
+      '',
+      expect.anything(),
+      undefined,
+      null,
+    );
   });
 
   it('should call selectWorkflow when previous workflow reuse is declined', async () => {

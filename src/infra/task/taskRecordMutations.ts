@@ -71,9 +71,11 @@ export function buildRetryTaskRecord(
   startStep: string | undefined,
   retryNote: string | undefined,
   resumePoint: WorkflowResumePoint | undefined,
+  workflow: string | undefined,
 ): TaskRecord {
   return {
     ...task,
+    ...(workflow ? { workflow } : {}),
     status,
     started_at: status === 'running' ? nowIso() : null,
     completed_at: null,
@@ -111,10 +113,13 @@ export function generateTaskName(slug: string, existingNames: string[]): string 
 }
 
 function clearRetryMetadata(task: TaskRecord): ClearedRetryTaskRecord {
-  const rest = { ...task };
-  delete rest.start_step;
-  delete rest.resume_point;
-  delete rest.exceeded_current_iteration;
-  delete rest.exceeded_max_steps;
-  return rest;
+  const retryMetadataKeys = new Set<string>([
+    'start_step',
+    'resume_point',
+    'exceeded_current_iteration',
+    'exceeded_max_steps',
+  ]);
+  return Object.fromEntries(
+    Object.entries(task).filter(([key]) => !retryMetadataKeys.has(key)),
+  ) as ClearedRetryTaskRecord;
 }
