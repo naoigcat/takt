@@ -14,12 +14,14 @@ import type { WorkflowRuleTransition } from './transitions.js';
 import { decrementStepIteration, incrementStepIteration } from './state-manager.js';
 import { handleBlocked } from './blocked-handler.js';
 import { isDelegatedWorkflowStep } from '../step-kind.js';
+import { resolvePromotionRuntime } from '../promotion/promotion-runtime.js';
 
 const log = createLogger('workflow-run-loop');
 
 interface WorkflowRunLoopDeps {
   state: WorkflowState;
   options: WorkflowEngineOptions;
+  getCwd: () => string;
   getMaxSteps: () => WorkflowMaxSteps;
   getReportDir: () => string;
   abortRequested: () => boolean;
@@ -47,6 +49,20 @@ interface WorkflowRunLoopDeps {
   addUserInput: (input: string) => void;
   emit: (event: string, ...args: unknown[]) => void;
   updateMaxSteps: (maxSteps: number) => void;
+}
+
+async function resolveStepPromotionRuntime(
+  deps: WorkflowRunLoopDeps,
+  step: WorkflowStep,
+  stepIteration: number | undefined,
+  runtime: RuntimeStepResolution | undefined,
+): Promise<RuntimeStepResolution | undefined> {
+  return resolvePromotionRuntime({
+    cwd: deps.getCwd(),
+    previousResponseContent: deps.state.lastOutput?.content ?? '',
+    structuredCaller: deps.options.structuredCaller,
+    resolveStepProviderModel: deps.resolveStepProviderModel,
+  }, step, stepIteration, runtime);
 }
 
 function sameFallbackProvider(
@@ -249,10 +265,15 @@ export async function runWorkflowToCompletion(deps: WorkflowRunLoopDeps): Promis
     deps.state.iteration++;
     const isDelegated = isDelegatedWorkflowStep(step);
     const activeIteration = deps.state.iteration;
-    const stepRuntime = withFallbackRuntime(deps.state, deps.resolveRuntimeForStep(step));
-    let prebuiltInstruction: string | undefined;
+    const baseStepRuntime = deps.resolveRuntimeForStep(step);
+    let stepIteration: number | undefined;
     if (!isDelegated) {
-      const stepIteration = incrementStepIteration(deps.state, step.name);
+      stepIteration = incrementStepIteration(deps.state, step.name);
+    }
+    const promotedRuntime = await resolveStepPromotionRuntime(deps, step, stepIteration, baseStepRuntime);
+    const stepRuntime = withFallbackRuntime(deps.state, promotedRuntime);
+    let prebuiltInstruction: string | undefined;
+    if (!isDelegated && stepIteration !== undefined) {
       prebuiltInstruction = deps.buildInstruction(step, stepIteration);
     }
     const stepInstruction = prebuiltInstruction
@@ -414,9 +435,20 @@ export async function runSingleWorkflowIteration(deps: WorkflowRunLoopDeps): Pro
 
   deps.state.iteration++;
   const activeIteration = deps.state.iteration;
-  const stepRuntime = withFallbackRuntime(deps.state, deps.resolveRuntimeForStep(step));
   deps.setActiveStep(step, activeIteration);
-  const result = await deps.runStep(step, undefined, stepRuntime);
+  const isDelegated = isDelegatedWorkflowStep(step);
+  const baseStepRuntime = deps.resolveRuntimeForStep(step);
+  let stepIteration: number | undefined;
+  if (!isDelegated) {
+    stepIteration = incrementStepIteration(deps.state, step.name);
+  }
+  const promotedRuntime = await resolveStepPromotionRuntime(deps, step, stepIteration, baseStepRuntime);
+  const stepRuntime = withFallbackRuntime(deps.state, promotedRuntime);
+  let prebuiltInstruction: string | undefined;
+  if (!isDelegated && stepIteration !== undefined) {
+    prebuiltInstruction = deps.buildInstruction(step, stepIteration);
+  }
+  const result = await deps.runStep(step, prebuiltInstruction, stepRuntime);
   const { response, providerInfo } = result;
   if (stepRuntime?.fallback) {
     deps.state.pendingFallback = undefined;

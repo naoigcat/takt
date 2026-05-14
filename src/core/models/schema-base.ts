@@ -212,7 +212,7 @@ export const StepQualityGatesOverrideSchema = z.object({
   quality_gates: QualityGatesSchema,
 }).optional();
 
-function hasPersonaProviderOptionsLeaf(
+export function hasProviderOptionsLeaf(
   providerOptions: NonNullable<z.infer<typeof StepProviderOptionsSchema>>,
 ): boolean {
   return Object.values(providerOptions).some(hasDefinedProviderOptionLeaf);
@@ -261,7 +261,7 @@ export const PersonaProviderEntrySchema = z.object({
 
   if (
     entry.provider_options !== undefined
-    && !hasPersonaProviderOptionsLeaf(entry.provider_options)
+    && !hasProviderOptionsLeaf(entry.provider_options)
   ) {
     ctx.addIssue({
       code: 'custom',

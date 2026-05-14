@@ -183,6 +183,7 @@ export class WorkflowEngine extends EventEmitter {
       () => runWorkflowToCompletion({
         state: this.state,
         options: this.options,
+        getCwd: () => this.cwd,
         getMaxSteps: () => this.maxSteps,
         getReportDir: () => this.runPaths.reportsAbs,
         abortRequested: () => this.abortRequested,
@@ -319,6 +320,7 @@ export class WorkflowEngine extends EventEmitter {
       () => runSingleWorkflowIteration({
         state: this.state,
         options: this.options,
+        getCwd: () => this.cwd,
         getMaxSteps: () => this.maxSteps,
         getReportDir: () => this.runPaths.reportsAbs,
         abortRequested: () => this.abortRequested,
