@@ -6,6 +6,31 @@
 
 フォーマットは [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) に基づいています。
 
+## [0.41.0] - 2026-05-14
+
+### Added
+
+- ステップレベルの `promotion` フィールドを追加 (#349)。同一ステップの実行回数や AI 判定に応じて `provider` / `model` / `provider_options` を昇格させる仕組み。各エントリは `at: <実行回数>`（その回以降にマッチ）と `condition: ai("...")` を任意で指定でき、昇格先として `provider` / `model` / `provider_options.*` のいずれかを 1 つ以上指定する。複数エントリは宣言順に評価し、最後にマッチしたものを採用。例として「2 回目までは速い軽量モデル、3 回目以降は Opus に昇格」「レビューが連続 reject されたら Claude Opus に昇格」といった用途を想定している。promotion はモデル / プロバイダ解決の最優先ソース（CLAUDE.md の解決順位を参照）。並列サブステップでは未サポート
+- Rate-limit fallback chain を追加 (#716)。`rate_limit_fallback.switch_chain` 設定（workflow `workflow_config` / プロジェクト `.takt/config.yaml` / グローバル `~/.takt/config.yaml`）により、Claude / Codex / OpenCode の rate-limit ヒット時にワークフローを中断させず、チェーン上の次プロバイダで同じステップを再実行できる。新セッションには fallback notice instruction (`facets/instructions/_system/fallback-notice.md`) が挿入され、中断理由・再実行対象ステップ・`report_dir` や commit diff からコンテキストを再構築する手順が伝わる。チェーン内の試行履歴は workflow state に追跡され、ステップ成功でリセットされる
+- `auto-improvement-loop` で AI が GitHub Issue タイトルを生成するようにした (#333)。followup-task / pr-followup-task の structured output スキーマを `title`, `type`, `scope`, `summary`, `goals`, `acceptance_criteria`, `labels` に拡張。プランニング instruction は AI に対し、Issue に適した短いタイトル（`# タスク指示書` / `# Task Order` のような汎用見出しは禁止）と構造化メタデータの出力を要求する。TAKT 側は `summary` / `goals` / `acceptance_criteria` を `## 概要 / ## 目的 / ## 受け入れ条件` の Markdown テンプレートに埋め込んで Issue 本文を生成する。タイトルが空 / 短すぎ / 禁止パターンに該当する場合は `fallback_reason` メトリクス付きで安全にフォールバックする
+- OpenCode `provider_options.opencode.variant` を追加 (#694)。OpenCode の `prompt` 呼び出しに渡す model variant（`high` / `low` 等）を文字列としてパススルー。step `provider_options`、workflow / persona / project / global 設定、`TAKT_PROVIDER_OPTIONS_OPENCODE_VARIANT` 環境変数のいずれからも指定可能
+- `PromptBasedStructuredCaller` の JSON パース失敗時リトライを追加 (#695)。`decomposeTask` / `requestMoreParts` を `withRetry`（最大 3 回、1000 ms 間隔）でラップし、\`\`\`json ... \`\`\` 抽出失敗・スキーマバリデーション失敗・provider の `status: 'error'` 応答などの一時的失敗で team-leader 全体が abort しないようにした。各リトライは `log.info` で `attempt` / `maxAttempts` / `error` を構造化ログ出力し、頻度を観測可能にしている。最終リトライも失敗した場合は元のエラーをそのまま伝播する。リトライによる `phase:start` 重複発火は dedup ガードで抑止し、`phase:start` / `phase:complete` の対称性を維持する
+
+### Changed
+
+- レビュー系インストラクションの観点列挙を廃止し、レビューワが policy / knowledge を直接読み込むように統一 (#718)。`review-arch` / `review-cqrs-es` / `review-frontend` / `review-qa` / `review-requirements` / `review-security` / `review-terraform` / `review-test` / `ai-antipattern-review` の 9 ファイルおよび `supervise` / `implement` / `implement-after-tests` から固有の「レビュー観点」リストを削除。代わりに「Knowledge / Policy の Source Path を Read で開く → `##` セクションを全列挙 → 各セクションの判定基準を差分と照合する」の 3 ステップ手順に統一した。複数レビューに転記されていた共通手順（設計判断の参照 / 前回指摘の追跡 / 判定の最終手順）は `policies/review.md` の「レビューの基本手順」に集約。これにより、policy / knowledge に章を追加しても instruction に追記しないと反映されない drift（PR #713 で ai-antipattern policy のデッドコード章が観点に未登録だった事例）を解消。`INSTRUCTION_STYLE_GUIDE.md` にも「レビュー系インストラクションでの観点列挙の禁止」を明文化した
+- Phase 1 プロンプトテンプレに「判断ルール」セクションを追加（en + ja）。全ステップ共通の指示として「未確認の値を推測しない」「同一セッションの過去 iteration の『修正済み / 確認済み』記憶を信用せず、判断直前に現在のファイル / ワーキングツリーで再確認する」の 2 ルールを注入する。長時間セッションでの context rot 対策
+- `cqrs-es` ナレッジに Aggregate の判断境界を明示。イベント再生で再現できる状態（Aggregate の責務）と、外部識別子の形式解釈や所有権確認（API 層 / UseCase 層の責務）を判定テーブルで切り分け、外部識別子の解釈を Aggregate に持ち込まない原則を追加した
+- Frontend / React 系ナレッジを補強（knowledge `frontend.md` / `react.md`、en + ja）。既存章に対するレビュー判定基準のピンポイント追記
+
+### Fixed
+
+- `claude-sdk` プロバイダが overage 未提供の組織で毎ステップ rate-limit 扱いになる問題を修正。`rate_limit_event` は呼び出しごとに情報イベントとして必ず流れ、overage 非対応組織では `overageStatus = 'rejected'` が恒常状態となる。これまでの OR 判定では単独の `rejected` overage を rate-limit ヒットと誤検出し、ステップが即時 abort していた。`isRejectedRateLimitEvent` はベース `status === 'rejected'` かつ overage が救済しない場合のみ true を返すよう訂正し、誤った仕様を固定していたテストも併せて修正した
+
+### Internal
+
+- `delay()` ヘルパーを `shared/utils/delay.ts` に集約し、`ArpeggioRunner` と `PromptBasedStructuredCaller` で共用するようにリファクタリング。`src/__tests__/delay.test.ts` にユニットテストを追加
+
 ## [0.40.0] - 2026-05-10
 
 ### Added
