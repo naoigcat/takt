@@ -168,7 +168,9 @@ describe('QueryExecutor rate limit cause preservation', () => {
     expect(queryMock).toHaveBeenCalledTimes(1);
   });
 
-  it('overageStatus だけが rejected の rate_limit_event でも RateLimit 文言を返す', async () => {
+  it('status=allowed なら overageStatus=rejected でも rate_limit 扱いせずリクエストを完走させる', async () => {
+    // overage 未提供の組織では overageStatus が恒常的に 'rejected' になるが、
+    // ベース status が 'allowed' であればリクエストは成功するため rate_limit ではない。
     // Given
     queryMock.mockReturnValue(
       createMockQuery([
@@ -176,7 +178,9 @@ describe('QueryExecutor rate limit cause preservation', () => {
           status: 'allowed',
           overageStatus: 'rejected',
         }),
-      ], new Error(EXIT_CODE_MESSAGE)),
+        createAssistantTextMessage('ok'),
+        createResultMessage({ subtype: 'success', result: 'ok' }),
+      ]),
     );
     const executor = new QueryExecutor();
 
@@ -184,9 +188,33 @@ describe('QueryExecutor rate limit cause preservation', () => {
     const result = await executor.execute('test prompt', { cwd: '/tmp/project' });
 
     // Then
-    expect(result.success).toBe(false);
-    expect(result.error).toBe(RATE_LIMIT_MESSAGE);
-    expect(result.errorKind).toBe('rate_limit');
+    expect(result.success).toBe(true);
+    expect(result.content).toBe('ok');
+    expect(result.errorKind).toBeUndefined();
+    expect(queryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('status=rejected でも overageStatus=allowed なら overage で救済されるので rate_limit 扱いしない', async () => {
+    // Given
+    queryMock.mockReturnValue(
+      createMockQuery([
+        createRateLimitEventMessage({
+          status: 'rejected',
+          overageStatus: 'allowed',
+        }),
+        createAssistantTextMessage('ok'),
+        createResultMessage({ subtype: 'success', result: 'ok' }),
+      ]),
+    );
+    const executor = new QueryExecutor();
+
+    // When
+    const result = await executor.execute('test prompt', { cwd: '/tmp/project' });
+
+    // Then
+    expect(result.success).toBe(true);
+    expect(result.content).toBe('ok');
+    expect(result.errorKind).toBeUndefined();
     expect(queryMock).toHaveBeenCalledTimes(1);
   });
 
@@ -364,6 +392,12 @@ describe('QueryExecutor rate limit cause preservation', () => {
     ['allowed', 'allowed'],
     ['allowed_warning', 'allowed_warning'],
     ['allowed', 'allowed_warning'],
+    // overage 未提供のため overageStatus が恒常的に rejected だが、ベースは通っている
+    ['allowed', 'rejected'],
+    ['allowed_warning', 'rejected'],
+    // ベースは超過しているが overage で救済される
+    ['rejected', 'allowed'],
+    ['rejected', 'allowed_warning'],
   ] as const)(
     'rate_limit_event status=%s overageStatus=%s は失敗扱いせず generic error と no-resume retry を維持する',
     async (status, overageStatus) => {

@@ -39,10 +39,15 @@ function toNumber(value: unknown): number | undefined {
 }
 
 function isRejectedRateLimitEvent(message: SDKRateLimitEvent): boolean {
-  return (
-    message.rate_limit_info.status === 'rejected'
-    || message.rate_limit_info.overageStatus === 'rejected'
-  );
+  // SDK は rate_limit_event を情報イベントとして毎回流す。
+  // overage 未提供の組織では overageStatus='rejected' が恒常状態になるため、
+  // ベース status が 'rejected' のときだけ rate limit と判断する。
+  // status='rejected' でも overage が 'allowed'/'allowed_warning' なら救済されるので false。
+  const info = message.rate_limit_info;
+  if (info.status !== 'rejected') {
+    return false;
+  }
+  return info.overageStatus !== 'allowed' && info.overageStatus !== 'allowed_warning';
 }
 
 function isRateLimitSignal(message: SDKMessage): boolean {
