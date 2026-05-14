@@ -6,6 +6,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.41.0] - 2026-05-14
+
+### Added
+
+- Step-level `promotion` field added (#349). Per-step execution-count or AI-judgment escalation for `provider` / `model` / `provider_options`. Each entry can specify `at: <execution-count>` (matches from that execution onward) and/or `condition: ai("...")`, plus the override target (`provider`, `model`, or `provider_options.*` leaf). Multiple entries are evaluated in declaration order with last-match wins. Useful for cases like "use the faster cheap model up to attempt 2, then escalate to Opus when the reviewer keeps rejecting". Promotion is the highest-priority source in model/provider resolution (see CLAUDE.md Model resolution priority order). Promotion is not supported on parallel sub-steps
+- Rate-limit fallback chain added (#716). New `rate_limit_fallback.switch_chain` config (workflow `workflow_config`, project `.takt/config.yaml`, and global `~/.takt/config.yaml`) lets a workflow continue across a Claude / Codex / OpenCode rate-limit hit by re-running the interrupted step on the next provider in the chain. The new session receives a fallback notice instruction (`facets/instructions/_system/fallback-notice.md`) describing why the previous session was interrupted, which step is being retried, and how to rebuild context from `report_dir` / commit diff. Attempts within a single fallback chain are tracked on workflow state and reset on successful step completion
+- AI-generated GitHub Issue titles for `auto-improvement-loop` (#333). The follow-up-task / pr-followup-task structured output schema was extended with `title`, `type`, `scope`, `summary`, `goals`, `acceptance_criteria`, and `labels`. The planning instruction now requires the AI to emit a short, Issue-appropriate title (rejecting generic headings like `# タスク指示書` / `# Task Order`) plus structured task metadata that TAKT renders into the Issue body using `## Summary / ## Goals / ## Acceptance Criteria`. Title validation has fallback handling for missing / too-short / prohibited titles with a `fallback_reason` metric so degradations are observable
+- OpenCode `provider_options.opencode.variant` added (#694). Pass-through string forwarded to the OpenCode `prompt` call as the model variant (e.g. `high` / `low`). Resolvable from step `provider_options`, workflow / persona / project / global config, and `TAKT_PROVIDER_OPTIONS_OPENCODE_VARIANT` env var
+- `PromptBasedStructuredCaller` retry on malformed JSON output (#695). `decomposeTask` / `requestMoreParts` now wrap each call in `withRetry` (3 attempts, 1000 ms delay) so a transient `\`\`\`json ... \`\`\`` extraction failure, schema validation failure, or `status: 'error'` response from the provider no longer aborts the whole team-leader run. Retry attempts are logged via `log.info` with `attempt` / `maxAttempts` / `error` so retry frequency is observable. The final attempt's error still propagates if all attempts fail, and `phase:start` is deduped across retries so the `phase:start` / `phase:complete` event pair stays balanced
+
+### Changed
+
+- Review-instruction observation lists removed; reviewers now read policy / knowledge facets directly (#718). The nine review instructions (`review-arch` / `review-cqrs-es` / `review-frontend` / `review-qa` / `review-requirements` / `review-security` / `review-terraform` / `review-test` / `ai-antipattern-review`) plus `supervise` and `implement` / `implement-after-tests` no longer carry per-instruction "review observation" enumerations. Instead, every review now runs a three-step procedure: Read the bound Knowledge and Policy Source Paths, enumerate every `##` section in them, then check each section's criteria against the diff. Common review boilerplate (design-judgment lookup, prior-comment tracking, final-decision steps) is consolidated into `policies/review.md` as "Review basic procedure". This fixes the drift observed in #713 where ai-antipattern policy gained a dead-code detection chapter but the review instruction's observation list did not include it. `INSTRUCTION_STYLE_GUIDE.md` was updated to forbid observation enumeration in review-type instructions
+- Phase 1 prompt template gains a "Judgment rules" section (en + ja). Two universal instructions are now injected into every step's main phase: do not infer or guess values that have not been confirmed, and do not trust "already-fixed" / "already-confirmed" memories from earlier iterations of the same session — re-verify against the current file/working tree immediately before judging. Targets context-rot on long-running sessions
+- `cqrs-es` knowledge clarifies Aggregate decision boundaries. Adds a decision table that explicitly separates state recoverable by event replay (Aggregate responsibility) from format interpretation / ownership lookup of external identifiers (API / UseCase layer responsibility), with the principle that external-identifier interpretation does not belong inside the Aggregate
+- Frontend / React knowledge reinforced (knowledge `frontend.md` / `react.md`, en + ja). Targeted additions to existing chapters to tighten review criteria
+
+### Fixed
+
+- `claude-sdk` provider no longer flags every step as rate-limited when the organization does not provide an overage allowance. `rate_limit_event` is emitted as an informational stream event each call, and `overageStatus = 'rejected'` is the steady state for organizations without overage. The previous OR-judgment treated a standalone `rejected` overage status as an active rate limit, so each step aborted immediately. `isRejectedRateLimitEvent` now requires the base `status === 'rejected'` (and falsely-fixed tests were corrected) so only an actual rate-limit event triggers fallback
+
+### Internal
+
+- `delay()` helper extracted to `shared/utils/delay.ts` and shared between `ArpeggioRunner` and `PromptBasedStructuredCaller`. Includes unit tests under `src/__tests__/delay.test.ts`
+
 ## [0.40.0] - 2026-05-10
 
 ### Added
