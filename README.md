@@ -270,6 +270,7 @@ await engine.run();
 | [Data Flow](./docs/data-flow.md) | Internal data flow and architecture diagrams |
 | [CI/CD Integration](./docs/ci-cd.md) | GitHub Actions and pipeline mode |
 | [Provider Sandbox & Permissions](./docs/provider-sandbox.md) | Sandbox, permission modes, and network access for Codex / OpenCode / Claude |
+| [External Integrations](./docs/external-integrations.md) | Community examples that extend TAKT without modifying core (audit trails, etc.) |
 | [Changelog](./CHANGELOG.md) ([日本語](./docs/CHANGELOG.ja.md)) | Version history |
 | [Security Policy](./SECURITY.md) | Vulnerability reporting |
 
