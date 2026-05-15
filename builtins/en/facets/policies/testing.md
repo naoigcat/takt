@@ -57,6 +57,18 @@ test('should return NotFound error when user does not exist', async () => {
 | Clarity | Failure cause is obvious | Failure cause is unclear |
 | Focus | One test, one concept | Multiple concerns mixed |
 
+## Test Data and Fixtures
+
+Test data should explicitly generate the minimum facts needed by each test. Mutating shared fixtures or using mocks that drift from real contracts reduces test reliability.
+
+| Criteria | Verdict |
+|----------|---------|
+| Shared fixtures are mutated and reused across tests | REJECT |
+| Mocks, fixtures, or factories return shapes that differ from real types or API contracts | REJECT |
+| Each test hand-writes a huge full-field fixture | Warning. Consider a factory |
+| Factories provide defaults and each test overrides only relevant fields | OK |
+| Contract changes update fixtures, mocks, and snapshots in the same change | OK |
+
 ### Naming
 
 Test names describe expected behavior. Use the `should {expected behavior} when {condition}` pattern.
@@ -125,8 +137,11 @@ Verify data flow coupling that unit tests alone cannot cover.
 
 ## E2E Test Criteria
 
+Design E2E tests from the entry points users actually use. Use code-level entry points such as routes, commands, endpoints, navigation, buttons, or external callbacks, not documentation assumptions alone.
+
 | Criteria | Verdict |
 |----------|---------|
+| E2E tests are written for imagined flows without checking real entry points | REJECT |
 | Hitting production APIs without mocking external calls | REJECT. Test reproducibility is lost |
 | Mocking the core logic under test | REJECT. Defeats the purpose of E2E |
 | Using fixed sleep for timing synchronization | REJECT. Use state-based waits |

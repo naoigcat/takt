@@ -374,14 +374,14 @@ Don't overlook compromises made to "just make it work."
 | Swallowed errors | Empty `catch {}`, `rescue nil` |
 | Magic numbers | Unexplained `if (status == 3)` |
 
-## Strict TODO Comment Prohibition
+## Unfinished Code Detection
 
-"We'll do it later" never gets done. What's not done now is never done.
+Unfinished-code judgment follows the coding policy. In architecture review, check whether TODO/FIXME comments, empty implementations, or stubs are being used as substitutes for required boundaries, authorization, validation, or contract updates.
 
-TODO comments are immediate REJECT.
+TODO/FIXME without an issue number, external blocker, and removal condition is REJECT.
 
 ```kotlin
-// REJECT - Future-looking TODO
+// REJECT - Authorization check deferred with TODO
 // TODO: Add authorization check by facility ID
 fun deleteCustomHoliday(@PathVariable id: String) {
     deleteCustomHolidayInputPort.execute(input)
@@ -398,12 +398,12 @@ fun deleteCustomHoliday(@PathVariable id: String) {
 }
 ```
 
-Only acceptable TODO cases:
+Acceptable TODO/FIXME cases:
 
 | Condition | Example | Judgment |
 |-----------|---------|----------|
-| External dependency prevents implementation + Issued | `// TODO(#123): Implement after API key obtained` | Acceptable |
-| Technical constraint prevents + Issued | `// TODO(#456): Waiting for library bug fix` | Acceptable |
+| External dependency prevents implementation + issue exists + removal condition documented | `// TODO(#123): Implement after API key obtained` | Acceptable |
+| Technical constraint prevents implementation + issue exists + removal condition documented | `// TODO(#456): Waiting for library bug fix` | Acceptable |
 | "Future implementation", "add later" | `// TODO: Add validation` | REJECT |
 | "No time for now" | `// TODO: Refactor` | REJECT |
 
@@ -429,7 +429,7 @@ When NOT to apply DRY:
 
 ## Spec Compliance Verification
 
-Verify that changes comply with the project's documented specifications.
+Contract-change consistency follows the coding policy. In architecture review, check whether changes contradict documented specifications, types, schemas, or config formats.
 
 Verification targets:
 
@@ -460,10 +460,10 @@ REJECT when these patterns are found:
 
 ## Call Chain Verification
 
-When new parameters/fields are added, verify not just the changed file but also callers.
+Missing wiring after contract changes follows the coding policy. In architecture review, check whether new parameters or fields actually reach callers, producers, and readers instead of staying local to the changed file.
 
 Verification steps:
-1. When finding new optional parameters or interface fields, `Grep` all callers
+1. When finding new optional parameters or interface fields, search all callers
 2. Check if all callers pass the new parameter
 3. If fallback value (`?? default`) exists, verify if fallback is used as intended
 
@@ -471,7 +471,7 @@ Danger patterns:
 
 | Pattern | Problem | Detection |
 |---------|---------|-----------|
-| `options.xxx ?? fallback` where all callers omit `xxx` | Feature implemented but always falls back | grep callers |
+| `options.xxx ?? fallback` where all callers omit `xxx` | Feature implemented but always falls back | Check callers |
 | Tests set values directly with mocks | Don't go through actual call chain | Check test construction |
 | `executeXxx()` doesn't receive `options` it uses internally | No route to pass value from above | Check function signature |
 
@@ -493,12 +493,12 @@ Call chain verification applies not only to "missing wiring" but also to the rev
 
 | Pattern | Problem | Detection |
 |---------|---------|-----------|
-| TTY check when all callers require TTY | Unreachable branch remains | grep all callers' preconditions |
+| TTY check when all callers require TTY | Unreachable branch remains | Check all callers' preconditions |
 | Null guard when callers already check null | Redundant defense | Trace caller constraints |
 | Runtime type check when TypeScript types constrain | Not trusting type safety | Check TypeScript type constraints |
 
 Verification steps:
-1. When finding defensive branches (TTY check, null guard, etc.), grep all callers
+1. When finding defensive branches (TTY check, null guard, etc.), check all callers
 2. If all callers already guarantee the condition, guard is unnecessary → REJECT
 3. If some callers don't guarantee it, keep the guard
 

@@ -37,13 +37,15 @@ REJECT without exception if any of the following apply.
 - Unused code ("just in case" code)
 - Direct mutation of objects/arrays
 - Swallowed errors (empty catch blocks)
-- TODO comments (not tracked in an issue)
+- TODO/FIXME without an issue number, external blocker, and removal condition
 - Essentially identical logic duplicated (DRY violation)
 - Method proliferation doing the same thing (should be absorbed by configuration differences)
 - Specific implementation leaking into generic layers (imports and branching for specific implementations in generic layers)
 - Internal implementation exported from public API (infrastructure functions or internal classes exposed publicly)
 - Replaced code/exports surviving after refactoring
 - Missing cross-validation of related fields (invariants of semantically coupled config values left unverified)
+- Missing caller, producer, or test data updates after a contract change
+- Sensitive data exposed in logs, error responses, or test output
 
 A DRY finding is not complete unless the proposed consolidation target is also sound. A consolidation proposal is invalid unless all of the following hold.
 
@@ -59,7 +61,7 @@ Not blocking, but improvement is recommended.
 - Tests coupled to implementation details
 - Overly complex functions/files
 - Unclear naming
-- Abandoned TODO/FIXME (those with issue numbers are acceptable)
+- TODO/FIXME with issue number, external blocker, and removal condition
 - `@ts-ignore` or `eslint-disable` without justification
 
 ### APPROVE
@@ -73,7 +75,7 @@ Always verify facts before raising an issue.
 | Do | Do Not |
 |----|--------|
 | Open the file and check actual code | Assume "it should be fixed already" |
-| Search for call sites and usages with grep | Raise issues based on memory |
+| Search for call sites and usages | Raise issues based on memory |
 | Cross-reference type definitions and schemas | Guess that code is dead |
 | Distinguish generated files (reports, etc.) from source | Review generated files as if they were source code |
 | Verify tool output is readable and uncorrupted | Raise issues based on garbled or abnormal output |

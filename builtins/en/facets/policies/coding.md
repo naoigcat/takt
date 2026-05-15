@@ -320,6 +320,18 @@ Dependencies and triggers must match the conditions under which the behavior sho
 | Rerun conditions correspond to URL, filters, explicit refresh actions, or other intended behavior | OK |
 | Initialization and later refetch triggers are designed separately | OK |
 
+## Contract Change Consistency
+
+When changing contracts that other code or users depend on — types, interfaces, APIs, config schemas, persistence formats, events, or file formats — keep definitions, producers, consumers, and verification aligned in the same change.
+
+| Criteria | Judgment |
+|----------|----------|
+| Only the contract definition is changed, while callers, producers, or readers are not updated | REJECT |
+| A new argument, field, or config value is added but there is no route to pass it to consumers | REJECT |
+| Fields or values not present in the documented schema/config format are used | REJECT |
+| Mocks, fixtures, or test data return shapes that differ from the real contract | REJECT |
+| The contract change and updates to callers, producers, and tests are made in the same change | OK |
+
 ## State Management
 
 - Confine state to where it is used
@@ -334,6 +346,30 @@ Dependencies and triggers must match the conditions under which the behavior sho
 | Multiple states have invariants that must always stay in sync | REJECT |
 | Persistence, sending, or diffing depends on derived values | REJECT |
 | Only canonical state is stored, and derived values are generated at use sites or boundaries | OK |
+
+## Unfinished Code
+
+Do not leave TODO/FIXME comments, empty implementations, stubs, or commented-out old implementations as substitutes for completed code. Implement what is needed now and delete what is not needed.
+
+| Criteria | Judgment |
+|----------|----------|
+| TODO/FIXME without an issue number, external blocker, and removal condition | REJECT |
+| Authorization, validation, persistence, or error handling is deferred with TODO | REJECT |
+| Empty implementations, `return null`, `pass`, or commented-out old implementations remain | REJECT |
+| An external dependency or known blocker makes implementation impossible now, with issue number and removal condition documented | Acceptable |
+| TODO only for future extension | REJECT |
+
+## Sensitive Information Handling
+
+Do not expose passwords, tokens, API keys, session IDs, auth headers, personal information, or other sensitive data in code, logs, error responses, or test output.
+
+| Criteria | Judgment |
+|----------|----------|
+| Sensitive data is hardcoded in source code or config files | REJECT |
+| Logs, exceptions, error responses, or test snapshots contain sensitive data | REJECT |
+| Whole requests or DTOs are logged and may include sensitive fields | REJECT |
+| Sensitive fields are explicitly omitted or masked | OK |
+| Debug logs include personal data but are assumed disabled in production | Warning. Verify it cannot leak through misconfiguration |
 
 ## Error Handling
 
@@ -496,10 +532,11 @@ Verification approach:
 - **Fallbacks are prohibited by default** - Do not write fallbacks using `?? 'unknown'`, `|| 'default'`, or swallowing via `try-catch`. Propagate errors upward. If absolutely necessary, add a comment explaining why
 - **Explanatory comments** - Express intent through code. Do not write What/How comments
 - **Unused code** - Do not write "just in case" code
+- **Unfinished code** - Do not leave TODO/FIXME without an issue number, external blocker, and removal condition; do not leave stubs or commented-out old code
 - **any type** - Do not break type safety
 - **Direct mutation of objects/arrays** - Create new instances with spread operators
 - **console.log** - Do not leave in production code
-- **Hardcoded secrets**
+- **Sensitive information exposure** - Do not include sensitive data in hardcoded values, logs, error responses, or test output
 - **Scattered hardcoded contract strings** - File names and config key names must be defined as constants in one place. Scattered literals are prohibited
 - **Scattered try-catch** - Centralize error handling at the upper layer
 - **Unsolicited backward compatibility / legacy support** - Not needed unless explicitly instructed
@@ -507,6 +544,6 @@ Verification approach:
 - **Replaced code surviving after refactoring** - Remove replaced code and exports. Do not keep unless explicitly told to
 - **Workarounds that bypass safety mechanisms** - If the root fix is correct, no additional bypass is needed
 - **Direct tool execution bypassing project scripts** - `npx tool` and similar bypass the lockfile, causing version mismatches. Look for project-defined scripts (npm scripts, Makefile, etc.) first. Only consider direct execution when no script exists
-- **Missing wiring** - When adding new parameters or fields, grep the entire call chain to verify. If callers do not pass the value, `options.xxx ?? fallback` always uses the fallback
+- **Missing wiring** - When adding new parameters or fields, search the entire call chain to verify. If callers do not pass the value, `options.xxx ?? fallback` always uses the fallback
 - **Redundant conditionals** - When if/else calls the same function with only argument differences, unify using ternary operators or spread syntax
-- **Copy-paste patterns** - Before writing new code, grep for existing implementations of the same kind and follow the existing pattern. Do not introduce your own style
+- **Copy-paste patterns** - Before writing new code, search for existing implementations of the same kind and follow the existing pattern. Do not introduce your own style

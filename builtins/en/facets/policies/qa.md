@@ -22,7 +22,9 @@
 
 | Pattern | Verdict |
 |---------|---------|
-| Abandoned TODO/FIXME | Warning |
+| TODO/FIXME without an issue number, external blocker, and removal condition | REJECT |
+| TODO/FIXME with issue number, external blocker, and removal condition | Warning |
+| Empty implementations, stubs, or commented-out old implementations left behind | REJECT |
 | @ts-ignore, @ts-expect-error without reason | Warning |
 | eslint-disable without reason | Warning |
 | Usage of deprecated APIs | Warning |
