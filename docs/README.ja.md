@@ -273,6 +273,7 @@ await engine.run();
 | [データフロー](./data-flow.md) | 内部データフローとアーキテクチャ図 |
 | [CI/CD Integration](./ci-cd.ja.md) | GitHub Actions・パイプラインモード |
 | [Provider Sandbox & Permissions](./provider-sandbox.md) | Codex / OpenCode / Claude のサンドボックス、パーミッション、ネットワーク設定 |
+| [External Integrations](./external-integrations.ja.md) | TAKT コアを変更せずに機能を拡張するコミュニティサンプル（監査ログ等） |
 | [Changelog](../CHANGELOG.md) ([日本語](./CHANGELOG.ja.md)) | バージョン履歴 |
 | [Security Policy](../SECURITY.md) | 脆弱性の報告 |
 
