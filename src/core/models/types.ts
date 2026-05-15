@@ -92,6 +92,8 @@ export type {
   PersonaProviderEntry,
   CustomAgentConfig,
   LoggingConfig,
+  ObservabilityConfig,
+  ResolvedObservabilityConfig,
   Language,
   PipelineConfig,
   ProjectConfig,

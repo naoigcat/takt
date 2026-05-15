@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 // --- Hoisted mocks (must be before vi.mock calls) ---
 
 const {
+  disabledObservability,
   MockWorkflowEngine,
   mockInterruptAllQueries,
   mockLoadGlobalConfig,
@@ -109,6 +110,12 @@ const {
   }
 
   return {
+    disabledObservability: {
+      enabled: false,
+      monitor: false,
+      sessionLogExporter: false,
+      usageEventsPhase: false,
+    },
     MockWorkflowEngine,
     mockInterruptAllQueries,
     mockLoadGlobalConfig,
@@ -146,7 +153,13 @@ vi.mock('../infra/config/index.js', () => ({
   })),
   resolveWorkflowConfigValues: (_projectDir: string, keys: readonly string[]) => {
     const global = mockLoadGlobalConfig() as Record<string, unknown>;
-    const config = { ...global, workflow: 'default', provider: global.provider ?? 'claude', verbose: false };
+    const config = {
+      ...global,
+      workflow: 'default',
+      provider: global.provider ?? 'claude',
+      verbose: false,
+      observability: disabledObservability,
+    };
     const result: Record<string, unknown> = {};
     for (const key of keys) {
       result[key] = config[key];

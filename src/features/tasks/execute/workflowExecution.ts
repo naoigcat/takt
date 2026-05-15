@@ -9,8 +9,11 @@ import { createIterationLimitHandler, createUserInputHandler } from './iteration
 import { createWorkflowExecutionBootstrap } from './workflowExecutionBootstrap.js';
 import { createWorkflowExecutionContext, createWorkflowCallResolver } from './workflowExecutionContext.js';
 import { bindWorkflowExecutionEvents, type WorkflowExecutionEventBridge } from './workflowExecutionEvents.js';
+import { createLogger } from '../../../shared/utils/index.js';
 
 export type { WorkflowExecutionResult, WorkflowExecutionOptions };
+
+const log = createLogger('workflow-execution');
 
 type WorkflowRunContext = {
   ignoreIterationLimit?: boolean;
@@ -75,7 +78,7 @@ async function executeWorkflowInternal(
   runContext?: WorkflowRunContext,
 ): Promise<WorkflowExecutionResult> {
   const parentRunPid = process.pid;
-  const bootstrap = createWorkflowExecutionBootstrap(workflowConfig, task, cwd, options);
+  const bootstrap = await createWorkflowExecutionBootstrap(workflowConfig, task, cwd, options);
   const workflowExecutionContext = createWorkflowExecutionContext(workflowConfig, options.projectCwd);
   const phase1ProcessSafetyByStep = resolvePhase1ProcessSafetyByStep(workflowConfig, parentRunPid);
   let engine: WorkflowEngine | null = null;
@@ -211,5 +214,12 @@ async function executeWorkflowInternal(
   } finally {
     bootstrap.prefixWriter?.flush();
     abortHandler.cleanup();
+    try {
+      await bootstrap.observabilityHandle.shutdown();
+    } catch (error) {
+      log.warn('Observability shutdown failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }
