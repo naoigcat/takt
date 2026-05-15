@@ -84,6 +84,54 @@ Event Granularity:
 - Appropriate: `ShippingAddressChanged` → Intent is clear
 - Too coarse: `OrderModified` → What changed is unclear
 
+## Event Evolution
+
+Events are persisted contracts. When the current event type changes, old events must still be replayable. Translation of old events belongs in the upcaster / migration layer at the event-store boundary, not in the event type itself or in domain logic.
+
+| Criteria | Judgment |
+|----------|----------|
+| Persisted event type or fields changed with no translation path | REJECT |
+| Current event type keeps aliases or compatibility-only properties for old field names | REJECT. Keep history compatibility in upcasters |
+| Aggregate or apply directly interprets old event shapes | REJECT. Convert to current events before replay |
+| Event carries "previous value" only for compatibility | REJECT. Events represent the fact after it happened |
+| Upcaster converts old payloads to the current event meaning | OK |
+| Tests verify old payloads deserialize into current events through the upcaster | OK |
+
+Responsibility split for event evolution:
+
+| Responsibility | Place |
+|----------------|-------|
+| Current event meaning and fields | Event type |
+| Translation of old payloads | Upcaster / migration layer |
+| State restoration by event replay | Aggregate `apply` |
+| Guarantee that old events can become current events | Upcaster tests |
+
+```kotlin
+// NG - mixing old-field compatibility into the current event type
+data class OrderAssignedEvent(
+    val orderId: String,
+    @JsonAlias("assigneeId")
+    val assigneeIds: List<String>
+)
+
+// OK - current event type represents only the current contract
+data class OrderAssignedEvent(
+    val orderId: String,
+    val assigneeIds: List<String>
+)
+```
+
+```kotlin
+// OK - convert old payloads to current payloads in the upcaster
+when (eventType) {
+    OrderAssignedEvent::class.java.typeName -> {
+        event.moveTextFieldToArray("assigneeId", "assigneeIds")
+    }
+}
+```
+
+Whether to keep old event classes depends on the framework and operations policy. In general, do not treat old classes as normal domain events; treat old serialized type names and payloads as the upcaster input contract and cover them with tests.
+
 ## Command Handlers
 
 | Criteria | Judgment |

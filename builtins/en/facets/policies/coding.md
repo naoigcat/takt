@@ -184,6 +184,41 @@ const handlers = { A: handleA, B: handleB, C: handleC };
 handlers[type]?.();
 ```
 
+### Do Not Over-Abstract
+
+Use abstraction to reduce duplication and real axes of change, and also to name concepts so the code is easier to understand. Turning a few concrete operations into "config objects + function objects + loops" is not abstraction if it only makes domain differences harder to read.
+
+| Criteria | Judgment |
+|----------|----------|
+| A small number of branches differs by event type, state, or domain concept | Use explicit `when` / `switch` |
+| The same operation with the same argument shape repeats in 3+ places | Consider abstraction |
+| A config array or function object is used in only one place | REJECT. Prefer explicit branching first |
+| Side effects or removed fields cannot be understood without reading config objects | REJECT |
+| Strategy names a domain concept and makes interchangeable implementations explicit | OK |
+| Branch names read as domain concepts | OK |
+
+```typescript
+// ❌ Over-abstracted - readers must inspect both the config array and loop to see behavior
+const operations = [
+  { kind: 'create', normalize: ['owner'], remove: [] },
+  { kind: 'revise', normalize: ['owner'], remove: ['legacyOwner'] },
+]
+for (const operation of operations) {
+  applyOperation(record, operation)
+}
+
+// ✅ When branch meaning matters, make it explicit
+switch (record.kind) {
+  case 'create':
+    normalizeOwner(record)
+    break
+  case 'revise':
+    removeLegacyOwner(record)
+    normalizeOwner(record)
+    break
+}
+```
+
 ### Keep Abstraction Levels Consistent
 
 Within a single function, keep operations at the same granularity. Extract detailed operations into separate functions. Do not mix "what to do" with "how to do it."

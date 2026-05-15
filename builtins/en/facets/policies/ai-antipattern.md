@@ -153,6 +153,25 @@ Legacy support criteria:
 - Do not add `.transform()` normalization, `LEGACY_*_MAP` mappings, or `@deprecated` type definitions
 - Support only new values and keep it simple
 
+### Over-Abstracting with Function Objects
+
+AI often turns a small number of concrete branches into config arrays, function objects, and generic loops to make the code look "extensible". The problem is not Strategy itself; the problem is hiding differences in data without naming the concept. A Strategy is useful when it names a domain concept and makes the replacement boundary explicit.
+
+| Pattern | Example | Verdict |
+|---------|---------|---------|
+| Single-use operation config array | Processing `[{ kind, fields, removedFields }]` in a loop | REJECT |
+| Deletions, side effects, or exception cases are hidden in config objects | Readers must inspect config values to find destructive behavior | REJECT |
+| Function object introduced when each branch is only 1-3 lines | `handlers[type]()` adds indirection only | REJECT |
+| Strategy represents a domain concept and clarifies the implementation boundary | `TaxPolicy`, `PaymentMethod`, `RetryStrategy` | OK |
+| Many branches share the same shape and are expected to grow | Consider a handler map | OK |
+
+Verification approach:
+1. Grep usage sites for added arrays, Maps, Strategies, or function objects
+2. If used in only one place, check whether explicit branching would be clearer
+3. Check whether side effects, deleted fields, or compatibility behavior are hidden in config objects
+4. Prefer `when` / `switch` when branch names sufficiently express domain meaning
+5. Allow Strategy when naming the concept improves understanding
+
 ## Premature Caching Strategy Introduction
 
 AI tends to proactively introduce caching mechanisms to "improve" performance. Do not add caching strategies until explicitly requested.

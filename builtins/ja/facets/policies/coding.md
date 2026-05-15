@@ -184,6 +184,41 @@ const handlers = { A: handleA, B: handleB, C: handleC };
 handlers[type]?.();
 ```
 
+### 抽象化しすぎない
+
+抽象化は重複や変更軸を減らすだけでなく、概念に名前を与えて理解しやすくするためにも使う。ただし、数件の具体処理を「設定オブジェクト + 関数オブジェクト + ループ」に変換して、業務上の違いが読みづらくなるだけなら抽象化ではない。
+
+| 基準 | 判定 |
+|------|------|
+| 少数の分岐がイベント種別・状態・業務概念ごとに異なる | `when` / `switch` で明示する |
+| 同じ処理を同じ引数構造で3箇所以上繰り返す | 抽象化を検討 |
+| 1箇所でしか使わない設定配列・関数オブジェクト | REJECT。まず明示分岐 |
+| 設定オブジェクトを読まないと副作用や削除対象が分からない | REJECT |
+| Strategy が業務概念に名前を与え、複数実装の差し替え点を明確にしている | OK |
+| 分岐名がドメイン概念として読める | OK |
+
+```typescript
+// ❌ 過剰抽象化 - 何が起きるかを設定配列とループの両方から読む必要がある
+const operations = [
+  { kind: 'create', normalize: ['owner'], remove: [] },
+  { kind: 'revise', normalize: ['owner'], remove: ['legacyOwner'] },
+]
+for (const operation of operations) {
+  applyOperation(record, operation)
+}
+
+// ✅ 分岐ごとの意味が重要なら明示する
+switch (record.kind) {
+  case 'create':
+    normalizeOwner(record)
+    break
+  case 'revise':
+    removeLegacyOwner(record)
+    normalizeOwner(record)
+    break
+}
+```
+
 ### 抽象度を揃える
 
 1つの関数内では同じ粒度の処理を並べる。詳細な処理は別関数に切り出す。「何をするか」と「どうやるか」を混ぜない。
