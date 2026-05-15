@@ -117,6 +117,19 @@ Exception (OK for child to have local state):
 | Inappropriate useEffect dependencies | REJECT |
 | Initial load tied to unstable Context/Provider function references | REJECT |
 
+### Canonical and Derived State
+
+State should hold canonical values such as user input, server data, and temporary UI state. Display values, aggregates, selection states, sorted results, and grouped results that can be computed from canonical state are derived values and must not be kept as independent state.
+
+| Criteria | Judgment |
+|----------|----------|
+| A value that can always be computed from one state is kept as another state | REJECT |
+| Multiple state fields have invariants that require constant synchronization | REJECT |
+| Display labels, counts, totals, all-selected flags, sorted results, or grouped results are kept as canonical state | REJECT |
+| API sending, persistence, or diffing depends on derived state instead of canonical state | REJECT |
+| Only canonical state is stored, and display, aggregation, and decisions are derived via selectors, render logic, or useMemo | OK |
+| Derived values required by external contracts are generated from canonical state at send or persistence boundaries | OK |
+
 State Placement Guidelines:
 
 | State Nature | Recommended Placement |

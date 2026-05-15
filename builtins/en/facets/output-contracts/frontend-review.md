@@ -11,6 +11,7 @@
 |--------|--------|-------|
 | Component design | ✅ | - |
 | State management | ✅ | - |
+| Canonical and derived state | ✅ | - |
 | Performance | ✅ | - |
 | Accessibility | ✅ | - |
 | Type safety | ✅ | - |

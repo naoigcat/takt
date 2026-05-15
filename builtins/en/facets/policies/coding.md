@@ -14,6 +14,7 @@ Prioritize correctness over speed, and code accuracy over ease of implementation
 | Boy Scout | Leave touched areas a little better than you found them |
 | Fail Fast | Detect errors early. Never swallow them |
 | Project scripts first | Use project-defined scripts for tool execution. Direct invocation is a last resort |
+| State normalization | Do not keep the same fact in multiple states |
 
 ## No Fallbacks or Default Arguments
 
@@ -324,6 +325,15 @@ Dependencies and triggers must match the conditions under which the behavior sho
 - Confine state to where it is used
 - Children do not modify state directly (notify parents via events)
 - State flow is unidirectional
+- Do not keep derived values that can be computed from canonical state as independent state
+- If multiple fields require constant synchronization, revisit the state model
+
+| Criteria | Judgment |
+|----------|----------|
+| A value that can always be computed from one state is kept as another state | REJECT |
+| Multiple states have invariants that must always stay in sync | REJECT |
+| Persistence, sending, or diffing depends on derived values | REJECT |
+| Only canonical state is stored, and derived values are generated at use sites or boundaries | OK |
 
 ## Error Handling
 
